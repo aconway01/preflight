@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="data.js"></script>
 
   <style>
     :root {
@@ -369,6 +370,36 @@
     }
     .checklist-status.complete   { background: rgba(22,163,74,0.15);  color: #4ADE80; }
     .checklist-status.incomplete { background: rgba(217,119,6,0.15);  color: #FCD34D; }
+
+    /* ── LIMITATIONS PANEL ── */
+    .limitations-category {
+      margin-bottom: 20px;
+    }
+    .limitations-category-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+      margin-bottom: 8px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .limitations-category-title.critical { color: var(--red); }
+    .limitations-category-title.warn     { color: var(--amber); }
+    .limitations-category-title.info     { color: var(--slate); }
+    .limitation-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(200,164,77,0.06);
+    }
+    .limitation-item:last-child { border-bottom: none; }
+    .limitation-icon { font-size: 12px; margin-top: 1px; flex-shrink: 0; }
+    .limitation-title {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px; font-weight: 500; color: var(--white);
+      margin-bottom: 3px;
+    }
+    .limitation-detail {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate); line-height: 1.6;
+    }
 
     .solo-locked-note {
       font-family: 'IBM Plex Mono', monospace;
@@ -1127,6 +1158,13 @@
       /* ── Checklists ── */
       #imsafePanel, #arrowPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
       #imsafePanelBody, #arrowPanelBody { display: block !important; }
+      #limitationsPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      #limitationsPanelBody { display: block !important; }
+      .limitations-category-title.critical { color: #B91C1C !important; }
+      .limitations-category-title.warn     { color: #B45309 !important; }
+      .limitations-category-title.info     { color: #555 !important; }
+      .limitation-title  { color: #111 !important; }
+      .limitation-detail { color: #555 !important; }
       .panel-label { color: #333 !important; opacity: 1; cursor: default; }
       .checklist-item { border-bottom-color: #ddd; }
       .checklist-label { color: #111 !important; }
@@ -1446,6 +1484,17 @@
     </div>
   </div>
 
+  <!-- Limitations Panel -->
+  <div class="panel" id="limitationsPanel">
+    <div class="panel-label" id="limitationsPanelLabel" onclick="togglePanel('limitations')">
+      <span class="toggle-arrow">▶</span>
+      Known Limitations &amp; Scope
+    </div>
+    <div class="panel-body" id="limitationsPanelBody">
+      <div id="limitationsContent"></div>
+    </div>
+  </div>
+
   <!-- Flight Plan Panel -->
   <div class="panel">
     <div class="panel-label" style="cursor:default; pointer-events:none;">
@@ -1515,12 +1564,10 @@
 </div>
 
 <script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRVu18oSRhNup9-jjDKYc3uuH5mW8j-lTv6-4s38KOUsWfOqDSzajmvgxuRcpQ20bB/exec';
-
-  const DEFAULT_MINS = { minVis: 5, minCeil: 2500, maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
-  const IFR_MINS     = { minVis: 1, minCeil: 200,  maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
-  // FAR 61.89 student solo minimums — 3SM visibility, 1,000ft ceiling
-  const SOLO_MINS    = { minVis: 3, minCeil: 1000, maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
+  const APPS_SCRIPT_URL = CA_DATA.APPS_SCRIPT_URL;
+  const DEFAULT_MINS    = CA_DATA.DEFAULT_MINS;
+  const IFR_MINS        = CA_DATA.IFR_MINS;
+  const SOLO_MINS       = CA_DATA.SOLO_MINS;
 
   // ── CLOCK ──
   function updateClock() {
@@ -1991,6 +2038,31 @@
     if (e.key === 'Enter') getBriefing();
   }
 
+  // ── LIMITATIONS PANEL ──
+  function renderLimitations() {
+    const container = document.getElementById('limitationsContent');
+    if (!container || !CA_DATA.LIMITATIONS) return;
+    const icons = { critical: '❌', warn: '⚠', info: 'ℹ' };
+    let html = '';
+    for (const cat of CA_DATA.LIMITATIONS) {
+      html += `<div class="limitations-category">
+        <div class="limitations-category-title ${cat.severity}">${cat.category}</div>`;
+      for (const item of cat.items) {
+        html += `<div class="limitation-item">
+          <div class="limitation-icon">${icons[cat.severity] || 'ℹ'}</div>
+          <div>
+            <div class="limitation-title">${item.title}</div>
+            <div class="limitation-detail">${item.detail}</div>
+          </div>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  renderLimitations();
+
   addLeg(); // Initialize with one leg
 
   // ── BRIEFING ──
@@ -2209,20 +2281,7 @@
   }
 
   function tzAbbr(tz) {
-    const abbrs = {
-      'America/New_York':   'ET',
-      'America/Chicago':    'CT',
-      'America/Denver':     'MT',
-      'America/Phoenix':    'MST',
-      'America/Los_Angeles':'PT',
-      'America/Anchorage':  'AKT',
-      'America/Adak':       'HAT',
-      'Pacific/Honolulu':   'HT',
-      'America/Halifax':    'AT',
-      'America/Toronto':    'ET',
-      'America/Vancouver':  'PT',
-    };
-    return abbrs[tz] || 'LT';
+    return CA_DATA.TZ_ABBRS[tz] || 'LT';
   }
 
   // ── CARD BUILDER ──
@@ -2279,37 +2338,74 @@
 
     // ── Sunrise / Sunset ──
     if (ri.sunriseSunset) {
-      const ss = ri.sunriseSunset;
+      const ss       = ri.sunriseSunset;
+      const ssArr    = ri.sunriseSunsetArr || null;
+
+      // Helper: build night flag HTML for a given time and location's sun data
+      const nightFlagHtml = (timeUtc, sunData, label) => {
+        if (!timeUtc || !sunData || !sunData.sunriseUtc || !sunData.sunsetUtc) return '';
+        const t       = new Date(timeUtc);
+        const sunrise = new Date(sunData.sunriseUtc);
+        const sunset  = new Date(sunData.sunsetUtc);
+        const isNight = t < sunrise || t > sunset;
+        if (isNight) {
+          const currency = label === 'Departure' && !isNaN(nightLandingsCount) && nightLandingsCount >= 3;
+          let html = `<div class="night-flag night" style="margin-top:8px;">🌙 Night ${label.toLowerCase()}</div>`;
+          if (label === 'Departure') {
+            html += currency
+              ? `<div class="night-flag day" style="margin-top:4px;">✅ Night currency — ${nightLandingsCount} landings in 90 days</div>`
+              : `<div class="night-flag currency" style="margin-top:4px;">⚠ Night currency — verify 3 full-stop night landings in 90 days (FAR 61.57b)</div>`;
+          }
+          return html;
+        }
+        return `<div class="night-flag day" style="margin-top:8px;">☀️ Day ${label.toLowerCase()}</div>`;
+      };
+
+      const depNight = nightFlagHtml(leg.depTimeUtc, ss, 'Departure');
+      const arrTimeUtc = leg.flightMin ? new Date(new Date(leg.depTimeUtc).getTime() + leg.flightMin * 60000).toISOString() : null;
+      const arrNight = ssArr ? nightFlagHtml(arrTimeUtc, ssArr, 'Arrival') : '';
+
+      // Departure sun times
       const sunriseLocal = ss.sunriseUtc ? formatLocalForDisplay(ss.sunriseUtc, tz) : '—';
       const sunsetLocal  = ss.sunsetUtc  ? formatLocalForDisplay(ss.sunsetUtc,  tz) : '—';
       const sunriseUtc   = ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc)        : '—';
       const sunsetUtc    = ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)         : '—';
 
-      // Night flight check
-      let nightHtml = '';
-      if (leg.depTimeUtc && ss.sunriseUtc && ss.sunsetUtc) {
-        const dep     = new Date(leg.depTimeUtc);
-        const sunrise = new Date(ss.sunriseUtc);
-        const sunset  = new Date(ss.sunsetUtc);
-        const isNight = dep < sunrise || dep > sunset;
-        if (isNight) {
-          const currency = !isNaN(nightLandingsCount) && nightLandingsCount >= 3;
-          nightHtml += `<div class="night-flag night" style="margin-top:8px;">🌙 Night departure</div>`;
-          nightHtml += currency
-            ? `<div class="night-flag day" style="margin-top:4px;">✅ Night currency — ${nightLandingsCount} landings in 90 days</div>`
-            : `<div class="night-flag currency" style="margin-top:4px;">⚠ Night currency — verify 3 full-stop night landings in 90 days (FAR 61.57b)</div>`;
-        } else {
-          nightHtml = `<div class="night-flag day" style="margin-top:8px;">☀️ Day departure</div>`;
-        }
-      }
-
-      html += `<div class="route-section">
-        <div class="route-section-label">Sunrise / Sunset · ${ss.date}</div>
+      let sunHtml = `<div class="route-section">
+        <div class="route-section-label">Sunrise / Sunset · ${leg.departure} (${ss.date})</div>
         <div class="sun-row">
           <div class="sun-item"><span>Sunrise</span>${sunriseLocal} ${tzAbbr(tz)} · ${sunriseUtc}</div>
           <div class="sun-item"><span>Sunset</span>${sunsetLocal} ${tzAbbr(tz)} · ${sunsetUtc}</div>
         </div>
-        ${nightHtml}
+        ${depNight}
+      </div>`;
+
+      // Arrival sun times — only if different date or different location
+      if (ssArr) {
+        const arrSunriseLocal = ssArr.sunriseUtc ? formatLocalForDisplay(ssArr.sunriseUtc, tz) : '—';
+        const arrSunsetLocal  = ssArr.sunsetUtc  ? formatLocalForDisplay(ssArr.sunsetUtc,  tz) : '—';
+        const arrSunriseUtc   = ssArr.sunriseUtc ? formatUtcForDisplay(ssArr.sunriseUtc)        : '—';
+        const arrSunsetUtc    = ssArr.sunsetUtc  ? formatUtcForDisplay(ssArr.sunsetUtc)         : '—';
+        sunHtml += `<div class="route-section">
+          <div class="route-section-label">Sunrise / Sunset · ${leg.arrival} (${ssArr.date})</div>
+          <div class="sun-row">
+            <div class="sun-item"><span>Sunrise</span>${arrSunriseLocal} ${tzAbbr(tz)} · ${arrSunriseUtc}</div>
+            <div class="sun-item"><span>Sunset</span>${arrSunsetLocal} ${tzAbbr(tz)} · ${arrSunsetUtc}</div>
+          </div>
+          ${arrNight}
+        </div>`;
+      }
+
+      html += sunHtml;
+    }
+
+    // ── IFR Alternate Requirement ──
+    if (ri.ifrAlternateRequired) {
+      const alt = ri.ifrAlternateRequired;
+      const cls = alt.required ? 'warn' : 'pass';
+      html += `<div class="route-section">
+        <div class="route-section-label">IFR Alternate Requirement (FAR 91.169)</div>
+        <div class="route-advisory ${cls}">${alt.note}</div>
       </div>`;
     }
 
@@ -2335,15 +2431,43 @@
       </div>`;
     }
 
+    // ── Terrain / Mountain Areas ──
+    if (ri.terrain && ri.terrain.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">Terrain Awareness</div>`;
+      for (const t of ri.terrain) {
+        const distDesc = t.nearEnd === 'en route'
+          ? `${t.distNm}nm from route`
+          : `${t.distNm}nm from ${t.nearEnd}`;
+        html += `<div class="route-advisory warn">⛰ ${t.name} — ${distDesc}
+          <div style="font-size:10px;margin-top:3px;opacity:0.85;">${t.note}</div>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+
+    // ── Convective SIGMETs ──
+    if (ri.convectiveSigmets && ri.convectiveSigmets.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">⛈ Convective SIGMETs (${ri.convectiveSigmets.length} active — hard no-go VFR)</div>`;
+      for (const s of ri.convectiveSigmets) {
+        const altStr = (s.base !== null && s.top !== null) ? ` · ${s.base}–${s.top}ft` : '';
+        html += `<div class="route-advisory nogo">❌ ${s.hazard || 'CONVECTIVE SIGMET'}${altStr}${s.validTo ? ' — valid to ' + formatUtcForDisplay(s.validTo) : ''}</div>`;
+        if (s.rawText) html += `<div class="pirep-raw">${s.rawText}</div>`;
+      }
+      html += `</div>`;
+    }
+
     // ── G-AIRMETs ──
     if (ri.gairmets && ri.gairmets.length > 0) {
       html += `<div class="route-section">
         <div class="route-section-label">G-AIRMETs (${ri.gairmets.length} active near route)</div>`;
       for (const a of ri.gairmets) {
-        const severity = a.hazard || 'ADVISORY';
-        const altStr   = (a.base !== null && a.top !== null)
-          ? ` · ${a.base}–${a.top}ft` : '';
-        html += `<div class="route-advisory warn">⚠ ${severity}${altStr}${a.validTo ? ' — valid to ' + formatUtcForDisplay(a.validTo) : ''}</div>`;
+        const altStr  = (a.base !== null && a.top !== null) ? ` · ${a.base}–${a.top}ft` : '';
+        const icingAt = a.atCruiseAlt
+          ? ` <span style="font-weight:600;color:var(--red);">⚠ AT CRUISE ALT</span>` : '';
+        const cls     = a.atCruiseAlt ? 'nogo' : 'warn';
+        html += `<div class="route-advisory ${cls}">⚠ ${a.hazard}${altStr}${icingAt}${a.validTo ? ' — valid to ' + formatUtcForDisplay(a.validTo) : ''}</div>`;
       }
       html += `</div>`;
     } else {
@@ -2375,12 +2499,19 @@
       html += `<div class="route-section">
         <div class="route-section-label">PIREPs — ${ri.pireps.length} near route</div>`;
       for (const p of ri.pireps) {
-        const altStr  = p.altitude ? ` · ${p.altitude.toLocaleString()}ft` : '';
-        const icgStr  = p.icing     ? ` · ICE: ${p.icing}`     : '';
-        const turbStr = p.turbulence ? ` · TURB: ${p.turbulence}` : '';
-        const cls     = (p.icing && p.icing !== 'NEG') || (p.turbulence && p.turbulence !== 'NEG') ? 'warn' : 'info';
-        html += `<div class="route-advisory ${cls}">${p.aircraft || 'PIREP'}${altStr}${icgStr}${turbStr}</div>`;
-        if (p.rawText) html += `<div class="pirep-raw">${p.rawText}</div>`;
+        const altStr    = p.altitude ? ` · ${p.altitude.toLocaleString()}ft` : '';
+        const icgStr    = p.icing      ? ` · ICE: ${p.icing}`      : '';
+        const turbStr   = p.turbulence ? ` · TURB: ${p.turbulence}` : '';
+        const hasHazard = (p.icing && p.icing !== 'NEG') || (p.turbulence && p.turbulence !== 'NEG');
+        // Altitude relevance — dim PIREPs more than 3000ft from cruise alt
+        const atAlt     = ri.cruiseAlt && p.altitude !== null
+          ? Math.abs(p.altitude - ri.cruiseAlt) <= 3000 : true;
+        const cls       = !atAlt ? 'info' : hasHazard ? 'warn' : 'info';
+        const dimStyle  = !atAlt ? ' style="opacity:0.55;"' : '';
+        const altNote   = !atAlt && p.altitude !== null
+          ? ` <span style="font-size:9px;opacity:0.7;">(${Math.abs(p.altitude - ri.cruiseAlt).toLocaleString()}ft from cruise)</span>` : '';
+        html += `<div class="route-advisory ${cls}"${dimStyle}>${p.aircraft || 'PIREP'}${altStr}${icgStr}${turbStr}${altNote}</div>`;
+        if (p.rawText) html += `<div class="pirep-raw"${dimStyle}>${p.rawText}</div>`;
       }
       html += `</div>`;
     } else {
@@ -2842,13 +2973,27 @@
           }
         }
 
-        // Sunrise/sunset
+        // Sunrise/sunset — departure
         if (ri.sunriseSunset) {
           const ss = ri.sunriseSunset;
           const srLocal = ss.sunriseUtc ? formatLocalForDisplay(ss.sunriseUtc, tz) : '—';
           const ssLocal = ss.sunsetUtc  ? formatLocalForDisplay(ss.sunsetUtc,  tz) : '—';
-          lines.push(`Sunrise: ${srLocal} ${tzAbbr(tz)} · ${ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc) : '—'}`);
-          lines.push(`Sunset:  ${ssLocal} ${tzAbbr(tz)} · ${ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)  : '—'}`);
+          lines.push(`Sunrise (${l.departure}): ${srLocal} ${tzAbbr(tz)} · ${ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc) : '—'}`);
+          lines.push(`Sunset  (${l.departure}): ${ssLocal} ${tzAbbr(tz)} · ${ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)  : '—'}`);
+        }
+
+        // Sunrise/sunset — arrival
+        if (ri.sunriseSunsetArr) {
+          const ss = ri.sunriseSunsetArr;
+          const srLocal = ss.sunriseUtc ? formatLocalForDisplay(ss.sunriseUtc, tz) : '—';
+          const ssLocal = ss.sunsetUtc  ? formatLocalForDisplay(ss.sunsetUtc,  tz) : '—';
+          lines.push(`Sunrise (${l.arrival}):   ${srLocal} ${tzAbbr(tz)} · ${ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc) : '—'}`);
+          lines.push(`Sunset  (${l.arrival}):   ${ssLocal} ${tzAbbr(tz)} · ${ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)  : '—'}`);
+        }
+
+        // IFR alternate requirement
+        if (ri.ifrAlternateRequired) {
+          lines.push(`IFR Alternate: ${ri.ifrAlternateRequired.note}`);
         }
 
         // SFRAs
@@ -2866,12 +3011,36 @@
           lines.push('Special Use Airspace: No permanent SFRAs within warning range');
         }
 
+        // Terrain
+        if (ri.terrain && ri.terrain.length > 0) {
+          lines.push(`Terrain Awareness (${ri.terrain.length} region${ri.terrain.length > 1 ? 's' : ''}):`);
+          ri.terrain.forEach(t => {
+            const distDesc = t.nearEnd === 'en route'
+              ? `${t.distNm}nm from route` : `${t.distNm}nm from ${t.nearEnd}`;
+            lines.push(`  ⛰ ${t.name} — ${distDesc}`);
+            lines.push(`     ${t.note}`);
+          });
+        }
+
+        // Convective SIGMETs
+        if (ri.convectiveSigmets && ri.convectiveSigmets.length > 0) {
+          lines.push(`⛈ CONVECTIVE SIGMETs (${ri.convectiveSigmets.length} — hard no-go VFR):`);
+          ri.convectiveSigmets.forEach(s => {
+            const alt = (s.base !== null && s.top !== null) ? ` ${s.base}–${s.top}ft` : '';
+            lines.push(`  ❌ ${s.hazard}${alt}${s.validTo ? ' valid to ' + formatUtcForDisplay(s.validTo) : ''}`);
+            if (s.rawText) lines.push(`     ${s.rawText}`);
+          });
+        } else {
+          lines.push('Convective SIGMETs: None active near route');
+        }
+
         // G-AIRMETs
         if (ri.gairmets && ri.gairmets.length > 0) {
           lines.push(`G-AIRMETs (${ri.gairmets.length} active):`);
           ri.gairmets.forEach(a => {
-            const alt = (a.base !== null && a.top !== null) ? ` ${a.base}–${a.top}ft` : '';
-            lines.push(`  ⚠ ${a.hazard}${alt}${a.validTo ? ' valid to ' + formatUtcForDisplay(a.validTo) : ''}`);
+            const alt      = (a.base !== null && a.top !== null) ? ` ${a.base}–${a.top}ft` : '';
+            const atCruise = a.atCruiseAlt ? ' ⚠ AT CRUISE ALT' : '';
+            lines.push(`  ⚠ ${a.hazard}${alt}${atCruise}${a.validTo ? ' valid to ' + formatUtcForDisplay(a.validTo) : ''}`);
           });
         } else {
           lines.push('G-AIRMETs: None active near route');
@@ -2893,10 +3062,14 @@
         if (ri.pireps && ri.pireps.length > 0) {
           lines.push(`PIREPs (${ri.pireps.length} near route):`);
           ri.pireps.forEach(p => {
-            const alt  = p.altitude ? ` ${p.altitude.toLocaleString()}ft` : '';
-            const ice  = p.icing      ? ` ICE:${p.icing}`      : '';
-            const turb = p.turbulence ? ` TURB:${p.turbulence}` : '';
-            lines.push(`  ${p.aircraft || 'PIREP'}${alt}${ice}${turb}`);
+            const alt     = p.altitude ? ` ${p.altitude.toLocaleString()}ft` : '';
+            const ice     = p.icing      ? ` ICE:${p.icing}`      : '';
+            const turb    = p.turbulence ? ` TURB:${p.turbulence}` : '';
+            const atAlt   = ri.cruiseAlt && p.altitude !== null
+              ? Math.abs(p.altitude - ri.cruiseAlt) <= 3000 : true;
+            const altNote = !atAlt && p.altitude !== null
+              ? ` (${Math.abs(p.altitude - ri.cruiseAlt).toLocaleString()}ft from cruise)` : '';
+            lines.push(`  ${p.aircraft || 'PIREP'}${alt}${ice}${turb}${altNote}`);
             if (p.rawText) lines.push(`     ${p.rawText}`);
           });
         } else {
@@ -2967,6 +3140,22 @@
     lines.push('This report does not replace an official weather briefing.');
     lines.push('Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.');
     lines.push('Central Aviation · Internal Use Only');
+    lines.push('');
+    lines.push('═'.repeat(50));
+    lines.push('KNOWN LIMITATIONS — WHAT THIS TOOL DOES NOT CHECK');
+    lines.push('═'.repeat(50));
+    if (CA_DATA && CA_DATA.LIMITATIONS) {
+      CA_DATA.LIMITATIONS.forEach(cat => {
+        lines.push('');
+        lines.push(`${cat.category.toUpperCase()}`);
+        lines.push('-'.repeat(50));
+        cat.items.forEach(item => {
+          lines.push(`  • ${item.title}`);
+          lines.push(`    ${item.detail}`);
+        });
+      });
+    }
+    lines.push('');
 
     const routeSlug = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
