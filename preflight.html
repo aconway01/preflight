@@ -236,6 +236,9 @@
         font-size: 9px;
         margin-top: 2px;
       }
+      .footer-logo {
+        height: 36px;
+      }
     }
 
     .currency-label {
@@ -1037,6 +1040,11 @@
       font-size: 10px; color: var(--slate);
       opacity: 0.6; line-height: 1.6; max-width: 560px;
     }
+    .footer-logo {
+      height: 48px; width: auto;
+      filter: brightness(1.4);
+      margin-left: 24px; flex-shrink: 0;
+    }
 
     /* ── MOBILE ── */
     @media (max-width: 700px) {
@@ -1582,7 +1590,7 @@
       Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.
       Central Aviation · Internal Use Only
     </div>
-    <img src="Logo.png" alt="Central Aviation" style="height:48px;width:auto;filter:brightness(1.4);margin-left:24px;flex-shrink:0;">
+    <img src="Logo.png" alt="Central Aviation" class="footer-logo">
   </footer>
 
 </div>
@@ -2086,6 +2094,10 @@
   }
 
   renderLimitations();
+
+  // Run resetMinimums after a tick so browser form-state restoration
+  // (which doesn't fire change events) has settled before we read radio state.
+  setTimeout(resetMinimums, 0);
 
   addLeg(); // Initialize with one leg
 
