@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Central Aviation — Preflight</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:       #0A1628;
+      --navy-mid:   #0F2346;
+      --navy-light: #1E3A8A;
+      --gold:       #C8A44D;
+      --gold-light: #E2C47A;
+      --slate:      #94A3B8;
+      --slate-light:#CBD5E1;
+      --white:      #F8FAFC;
+      --green:      #16A34A;
+      --green-bg:   #052E16;
+      --amber:      #D97706;
+      --amber-bg:   #1C1009;
+      --red:        #DC2626;
+      --red-bg:     #1C0404;
+      --panel:      #0D1E38;
+      --border:     rgba(200,164,77,0.2);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,164,77,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,164,77,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; top: -20%; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, rgba(30,58,138,0.3) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 1080px; margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 16px 0 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); margin-bottom: 32px;
+    }
+
+    .logo-block { display: flex; align-items: center; gap: 14px; }
+
+    .logo-img {
+      height: 52px; width: auto;
+      flex-shrink: 0;
+      /* Subtle brightness boost so logo reads well on dark background */
+      filter: brightness(1.05);
+    }
+
+    .logo-text .org {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 17px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--white);
+    }
+    .logo-text .tool {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--gold);
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+
+    .header-meta {
+      text-align: right;
+      line-height: 1;
+    }
+
+    .header-clock-utc {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px; font-weight: 600;
+      letter-spacing: 2px; color: var(--gold);
+      display: block;
+    }
+
+    .header-clock-utc-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      opacity: 0.6; margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .header-clock-local {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; color: var(--slate);
+      display: block; margin-top: 4px;
+    }
+
+    .header-meta-note {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate);
+      opacity: 0.5; display: block; margin-top: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── PANELS ── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+    }
+
+    .panel-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      user-select: none;
+    }
+    .panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .panel-label .toggle-arrow {
+      font-size: 10px; color: var(--gold); opacity: 0.6;
+      transition: transform 0.2s; flex-shrink: 0;
+    }
+    .panel-label.open .toggle-arrow { transform: rotate(90deg); }
+
+    .panel-body { display: none; }
+    .panel-body.open { display: block; }
+    .panel-body-always { display: block; }
+
+    /* ── FLIGHT INFO PANEL ── */
+    .flight-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .flight-info-field {
+      min-width: 0;
+    }
+
+    .flight-info-field label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 5px;
+    }
+
+    .flight-info-field input[type="text"],
+    .flight-info-field input[type="date"] {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 8px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--white); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      color-scheme: dark;
+      box-sizing: border-box;
+      text-align: left;
+    }
+    #flightInfoPanel input[type="text"],
+    #flightInfoPanel input[type="date"] {
+      height: 40px;
+    }
+    .flight-info-field input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .flight-info-field input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(200,164,77,0.1);
+    }
+
+    /* ── CURRENCY PANEL ── */
+    .currency-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(200,164,77,0.08);
+    }
+    .currency-item:last-child { border-bottom: none; }
+
+    .currency-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.5px; color: var(--white);
+    }
+
+    .currency-desc {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 11px; color: var(--slate);
+      line-height: 1.5; margin-top: 2px;
+    }
+
+    .currency-input-group {
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .currency-number {
+      width: 64px;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 6px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--white); outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .currency-number:focus { border-color: var(--gold); }
+
+    .currency-date {
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 6px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; color: var(--white); outline: none;
+      transition: border-color 0.2s;
+      color-scheme: dark;
+    }
+    .currency-date:focus { border-color: var(--gold); }
+
+    .currency-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      padding: 3px 10px; border-radius: 3px;
+      white-space: nowrap; min-width: 80px;
+      text-align: center;
+    }
+    .currency-badge.current     { background: rgba(22,163,74,0.15);  color: #4ADE80; border: 1px solid rgba(22,163,74,0.3); }
+    .currency-badge.not-current { background: rgba(220,38,38,0.15);  color: #F87171; border: 1px solid rgba(220,38,38,0.3); }
+    .currency-badge.unknown     { background: rgba(148,163,184,0.1); color: var(--slate); border: 1px solid rgba(148,163,184,0.2); }
+
+    .solo-endorsement-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(200,164,77,0.15);
+      display: none;
+    }
+    .solo-endorsement-section.visible { display: block; }
+
+    /* ── MINIMUMS PANEL ── */
+    .mins-inputs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .mins-field label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 5px;
+    }
+
+    .mins-field input {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 8px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--white); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .mins-field input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(200,164,77,0.1);
+    }
+
+    .mins-reset {
+      margin-top: 12px;
+      background: none;
+      border: 1px dashed rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 6px 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--slate);
+      cursor: pointer; transition: color 0.2s, border-color 0.2s;
+    }
+    .mins-reset:hover { color: var(--gold); border-color: var(--gold); }
+
+    /* ── CHECKLISTS ── */
+    .checklist-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(200,164,77,0.08);
+      align-items: start;
+    }
+    .checklist-item:last-child { border-bottom: none; }
+
+    .checklist-checkbox {
+      display: flex; align-items: center; gap: 8px;
+      padding-top: 2px;
+    }
+
+    .checklist-checkbox input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--gold);
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    .checklist-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.5px; color: var(--white);
+      white-space: nowrap;
+    }
+
+    .checklist-desc {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 11px; color: var(--slate);
+      line-height: 1.5; margin-top: 2px;
+    }
+
+    .checklist-notes {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 4px; padding: 6px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--white); outline: none;
+      resize: vertical; min-height: 36px;
+      transition: border-color 0.2s;
+      margin-top: 6px;
+    }
+    .checklist-notes:focus { border-color: var(--gold); }
+    .checklist-notes::placeholder { color: rgba(148,163,184,0.4); }
+
+    .checklist-item.checked .checklist-label { color: var(--gold); }
+
+    .checklist-status {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1px;
+      margin-top: 10px; padding: 6px 12px;
+      border-radius: 4px; display: inline-block;
+    }
+    .checklist-status.complete   { background: rgba(22,163,74,0.15);  color: #4ADE80; }
+    .checklist-status.incomplete { background: rgba(217,119,6,0.15);  color: #FCD34D; }
+
+    .solo-locked-note {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--amber);
+      letter-spacing: 0.5px; margin-top: 8px;
+      padding: 5px 10px;
+      background: rgba(217,119,6,0.08);
+      border: 1px solid rgba(217,119,6,0.2);
+      border-radius: 4px; display: none;
+    }
+    .flight-rules-toggle {
+      display: flex; align-items: center; gap: 0;
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; overflow: hidden;
+    }
+
+    .flight-rules-toggle input[type="radio"] { display: none; }
+
+    .flight-rules-toggle label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate);
+      padding: 6px 14px; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+      flex: 1; text-align: center;
+      display: flex; align-items: center; justify-content: center;
+      align-self: stretch;
+    }
+
+    .flight-rules-toggle input[type="radio"]:checked + label {
+      background: rgba(200,164,77,0.15);
+      color: var(--gold);
+    }
+
+    .flight-rules-toggle label:hover {
+      background: rgba(200,164,77,0.05);
+      color: var(--slate-light);
+    }
+
+    /* ── FLIGHT PLAN PANEL ── */
+    .plan-header {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+
+    .tz-select {
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 6px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate); outline: none;
+      cursor: pointer;
+    }
+    .tz-select:focus { border-color: var(--gold); }
+
+    .tz-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate);
+      white-space: nowrap;
+    }
+
+    #legsContainer { margin-bottom: 16px; }
+
+    .leg-row {
+      background: rgba(10,22,40,0.4);
+      border: 1px solid rgba(200,164,77,0.1);
+      border-radius: 6px; padding: 14px 16px;
+      margin-bottom: 10px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+
+    .leg-row-top {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr auto;
+      gap: 10px; align-items: end; margin-bottom: 10px;
+    }
+
+    .leg-row-bottom {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px; align-items: end;
+      padding-top: 10px;
+      border-top: 1px solid rgba(200,164,77,0.08);
+    }
+
+    .leg-number {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      color: var(--gold); opacity: 0.6;
+      padding-bottom: 14px; white-space: nowrap;
+    }
+
+    .leg-field label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 5px;
+    }
+
+    .leg-field input[type="text"] {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px; padding: 10px 14px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px; font-weight: 600;
+      letter-spacing: 4px; text-transform: uppercase;
+      color: var(--white); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      text-align: center; min-width: 90px;
+      height: auto;
+    }
+    .leg-field input[type="text"]::placeholder {
+      color: rgba(148,163,184,0.3);
+      letter-spacing: 2px; font-size: 16px;
+    }
+    .leg-field input[type="text"]:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(200,164,77,0.1);
+    }
+
+    /* Flight time input overrides — smaller than ICAO station inputs */
+    .flight-time-input {
+      font-family: 'IBM Plex Mono', monospace !important;
+      font-size: 12px !important;
+      font-weight: 400 !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+      text-align: left !important;
+      padding: 8px 10px !important;
+      border-color: rgba(200,164,77,0.2) !important;
+      height: 38px !important;
+      box-sizing: border-box !important;
+    }
+    .flight-time-input::placeholder {
+      font-size: 12px !important;
+      letter-spacing: 0 !important;
+      color: rgba(148,163,184,0.3) !important;
+    }
+
+    .leg-field input[type="datetime-local"],
+    .leg-field input[type="number"] {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 4px; padding: 8px 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px; color: var(--white); outline: none;
+      transition: border-color 0.2s;
+      color-scheme: dark;
+      height: 38px;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .leg-field input[type="datetime-local"]:focus,
+    .leg-field input[type="number"]:focus {
+      border-color: var(--gold);
+    }
+
+    .leg-arrow {
+      display: flex; align-items: center; justify-content: center;
+      padding-bottom: 12px;
+      color: var(--gold); font-size: 18px; opacity: 0.5;
+    }
+
+    .btn-remove-leg {
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 10px;
+      background: none; border: none;
+      color: var(--slate); font-size: 18px;
+      cursor: pointer; opacity: 0.4;
+      transition: opacity 0.2s, color 0.2s; line-height: 1;
+    }
+    .btn-remove-leg:hover { opacity: 1; color: #F87171; }
+
+    .legs-actions {
+      display: flex; gap: 12px;
+      margin-bottom: 16px; align-items: center;
+    }
+
+    .btn-add-leg {
+      background: none;
+      border: 1px dashed rgba(200,164,77,0.4);
+      border-radius: 4px; padding: 8px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gold);
+      opacity: 0.7; cursor: pointer;
+      transition: opacity 0.2s, border-color 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-add-leg:hover { opacity: 1; border-color: var(--gold); }
+
+    .leg-count-note {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate); opacity: 0.5;
+    }
+
+    .btn-brief {
+      width: 100%;
+      background: var(--navy-light);
+      border: 1px solid var(--gold);
+      border-radius: 4px; padding: 14px 24px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px; font-weight: 600;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--gold); cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-brief:hover:not(:disabled) {
+      background: rgba(30,58,138,0.8);
+      box-shadow: 0 0 20px rgba(200,164,77,0.15);
+    }
+    .btn-brief:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-brief .spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid rgba(200,164,77,0.3);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto;
+    }
+    .btn-brief.loading .btn-text { display: none; }
+    .btn-brief.loading .spinner  { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TRIP VERDICT ── */
+    .trip-verdict {
+      border-radius: 8px; padding: 24px 28px;
+      margin-bottom: 24px; border: 1px solid; display: none;
+    }
+    .trip-verdict.go      { background: var(--green-bg); border-color: rgba(22,163,74,0.4); }
+    .trip-verdict.caution { background: var(--amber-bg); border-color: rgba(217,119,6,0.4); }
+    .trip-verdict.nogo    { background: var(--red-bg);   border-color: rgba(220,38,38,0.4); }
+
+    .verdict-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .verdict-icon   { font-size: 28px; line-height: 1; }
+    .verdict-title  {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; opacity: 0.6; margin-bottom: 2px;
+    }
+    .verdict-rec {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px; font-weight: 700; letter-spacing: 1px;
+    }
+    .trip-verdict.go      .verdict-rec { color: #4ADE80; }
+    .trip-verdict.caution .verdict-rec { color: #FCD34D; }
+    .trip-verdict.nogo    .verdict-rec { color: #F87171; }
+
+    .verdict-route {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px; color: var(--slate); margin-top: 4px;
+    }
+
+    /* ── ACTIONS BAR ── */
+    .actions-bar { display: none; justify-content: flex-end; gap: 12px; margin-bottom: 28px; }
+    .actions-bar.visible { display: flex; }
+
+    .btn-action {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px; padding: 8px 18px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--slate);
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-action:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── LEG SECTION ── */
+    .leg-section { margin-bottom: 40px; }
+
+    .leg-section-header {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 10px; margin-bottom: 20px;
+    }
+
+    .leg-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      background: rgba(200,164,77,0.08);
+      border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 3px; padding: 4px 10px; white-space: nowrap;
+    }
+
+    .leg-route-label {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 18px; font-weight: 600;
+      letter-spacing: 2px; color: var(--white);
+    }
+
+    .leg-time-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate); opacity: 0.7;
+    }
+
+    .leg-section-header::after {
+      content: ''; flex: 1; min-width: 20px;
+      height: 1px; background: var(--border);
+    }
+
+    .leg-rec-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 3px; white-space: nowrap;
+    }
+    .leg-rec-go      { background: rgba(22,163,74,0.15);  color: #4ADE80; border: 1px solid rgba(22,163,74,0.3); }
+    .leg-rec-caution { background: rgba(217,119,6,0.15);  color: #FCD34D; border: 1px solid rgba(217,119,6,0.3); }
+    .leg-rec-nogo    { background: rgba(220,38,38,0.15);  color: #F87171; border: 1px solid rgba(220,38,38,0.3); }
+
+    .reports-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+
+    /* ── STATION CARD ── */
+    .station-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+
+    /* Always-visible card summary */
+    .card-summary {
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .card-summary:hover:not(.open) { background: rgba(200,164,77,0.03); }
+
+    .card-summary-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-station-block { display: flex; flex-direction: column; gap: 2px; }
+    .card-role {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--gold); opacity: 0.7;
+    }
+    .card-station {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px; font-weight: 700; letter-spacing: 3px;
+    }
+    .card-station-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate); opacity: 0.6;
+    }
+
+    .card-summary-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+    .flight-cat {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 2px; padding: 4px 10px; border-radius: 3px;
+    }
+    .cat-vfr    { background:rgba(22,163,74,0.2);  color:#4ADE80; border:1px solid rgba(22,163,74,0.3); }
+    .cat-mvfr   { background:rgba(59,130,246,0.2); color:#93C5FD; border:1px solid rgba(59,130,246,0.3); }
+    .cat-ifr    { background:rgba(220,38,38,0.2);  color:#F87171; border:1px solid rgba(220,38,38,0.3); }
+    .cat-lifr   { background:rgba(168,85,247,0.2); color:#D8B4FE; border:1px solid rgba(168,85,247,0.3); }
+    .cat-unknown{ background:rgba(148,163,184,0.2);color:var(--slate); border:1px solid rgba(148,163,184,0.2); }
+
+    .card-rec {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 0.5px; text-align: right;
+      padding: 3px 8px; border-radius: 3px;
+    }
+    .card-rec.go      { background: rgba(22,163,74,0.15);  color: #4ADE80; }
+    .card-rec.caution { background: rgba(217,119,6,0.15);  color: #FCD34D; }
+    .card-rec.nogo    { background: rgba(220,38,38,0.15);  color: #F87171; }
+
+    .card-expand-hint {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate); opacity: 0.4;
+      display: flex; align-items: center; gap: 4px;
+      margin-top: 4px;
+    }
+    .card-expand-hint .arrow { transition: transform 0.2s; }
+    .card-summary.open .card-expand-hint .arrow { transform: rotate(90deg); }
+
+    /* Collapsible card body */
+    .card-detail {
+      display: none;
+      border-top: 1px solid var(--border);
+    }
+    .card-detail.open { display: block; }
+
+    /* Analysis section (current or arrival) inside card detail */
+    .analysis-section {
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(200,164,77,0.08);
+    }
+    .analysis-section:last-child { border-bottom: none; }
+
+    .analysis-section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      opacity: 0.7; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .analysis-section-label .source-tag {
+      background: rgba(200,164,77,0.1);
+      border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 2px; padding: 1px 6px;
+      font-size: 8px; letter-spacing: 1px;
+    }
+    .analysis-section-label .time-tag {
+      color: var(--slate); opacity: 0.8; font-size: 9px;
+    }
+
+    .analysis-period-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate); opacity: 0.5;
+      margin-bottom: 10px;
+    }
+
+    .metar-raw {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate);
+      background: var(--navy);
+      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 4px; padding: 10px 12px;
+      margin-bottom: 12px; word-break: break-all; line-height: 1.6;
+    }
+
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+
+    .metric {
+      background: var(--navy);
+      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 4px; padding: 8px 10px;
+    }
+    .metric-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 3px;
+    }
+    .metric-value {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px; font-weight: 600; color: var(--white);
+    }
+    .metric-value.warn { color: #FCD34D; }
+    .metric-value.fail { color: #F87171; }
+    .metric-value.pass { color: #4ADE80; }
+
+    .mins-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 6px;
+    }
+    .mins-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+    .min-item {
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      background: var(--navy); border-radius: 3px; padding: 5px 9px;
+    }
+    .min-key     { color: var(--slate); }
+    .min-pass    { color: #4ADE80; font-weight: 500; }
+    .min-fail    { color: #F87171; font-weight: 500; }
+    .min-caution { color: #FCD34D; font-weight: 500; }
+    .min-na      { color: var(--slate); opacity: 0.5; }
+
+    .concerns-block, .positives-block { margin-bottom: 8px; }
+    .block-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 4px;
+    }
+    .concern-item, .positive-item {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 11px; line-height: 1.5; padding: 3px 0;
+      border-bottom: 1px solid rgba(148,163,184,0.06);
+      color: var(--slate-light);
+    }
+    .concern-item:last-child, .positive-item:last-child { border-bottom: none; }
+
+    /* No TAF notice */
+    .no-taf-notice {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate); opacity: 0.6;
+      padding: 12px 0; line-height: 1.6;
+    }
+
+    /* Raw data section */
+    .raw-section { padding: 14px 18px; }
+    .raw-section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--slate);
+      opacity: 0.5; margin-bottom: 8px;
+    }
+
+    .taf-toggle {
+      width: 100%; background: none;
+      border: 1px solid rgba(148,163,184,0.15);
+      border-radius: 4px; padding: 7px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--slate);
+      cursor: pointer; text-align: left;
+      display: flex; justify-content: space-between; align-items: center;
+      transition: border-color 0.2s; margin-top: 6px;
+    }
+    .taf-toggle:hover { border-color: rgba(200,164,77,0.3); color: var(--gold); }
+
+    .taf-content {
+      display: none; margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate);
+      background: var(--navy);
+      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 4px; padding: 10px 12px;
+      line-height: 1.8; white-space: pre-wrap; word-break: break-word;
+    }
+    .taf-content.open { display: block; }
+
+    /* ── ERROR ── */
+    .error-msg {
+      background: var(--red-bg);
+      border: 1px solid rgba(220,38,38,0.3);
+      border-radius: 6px; padding: 16px 20px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px; color: #F87171;
+      display: none; margin-bottom: 24px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px; margin-top: 48px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    footer .disclaimer {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--slate);
+      opacity: 0.6; line-height: 1.6; max-width: 560px;
+    }
+    footer .stamp {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      opacity: 0.4; white-space: nowrap; margin-left: 24px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 700px) {
+      .reports-grid { grid-template-columns: 1fr; }
+      .leg-row-top {
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+      }
+      .leg-number {
+        display: block;
+        grid-column: unset;
+        padding-bottom: 0;
+        margin-bottom: 10px;
+        font-size: 10px;
+      }
+      .leg-row-top .leg-number { display: none; }
+      .leg-row::before {
+        content: attr(data-leg-label);
+        display: block;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 10px; letter-spacing: 1px;
+        color: var(--gold); opacity: 0.6;
+        margin-bottom: 10px;
+      }
+      .leg-arrow { display: none; }
+      .leg-row-bottom { grid-template-columns: 1fr auto; }
+      .leg-row-bottom .leg-field:first-child { grid-column: 1 / -1; }
+      .leg-row-bottom .leg-field { min-width: 0; overflow: hidden; }
+      .leg-field input[type="datetime-local"] { min-width: 0; width: 100%; }
+      .flight-info-grid { grid-template-columns: 1fr; }
+      .flight-rules-toggle { width: 100%; }
+      .mins-inputs { grid-template-columns: 1fr 1fr; }
+      .leg-section-header::after { display: none; }
+      .leg-rec-badge { white-space: normal; word-break: break-word; font-size: 9px; }
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: white; color: #111; }
+      body::before, body::after { display: none; }
+      .panel, .actions-bar, .header-meta { display: none !important; }
+      .wrap { padding: 0; }
+      footer {
+        border-top: 1px solid #ccc;
+        margin-top: 24px; padding-top: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      footer .disclaimer { color: #555 !important; opacity: 1; font-size: 9px; }
+      footer .stamp { color: #999 !important; opacity: 1; }
+
+      .trip-verdict { border: 2px solid #333; background: #f5f5f5 !important; margin-bottom: 20px; display: block !important; }
+      .trip-verdict.go      { border-color: #16A34A; }
+      .trip-verdict.caution { border-color: #D97706; }
+      .trip-verdict.nogo    { border-color: #DC2626; }
+      .verdict-title  { color: #444 !important; opacity: 1; }
+      .verdict-rec, .verdict-icon, .verdict-route { color: #111 !important; }
+
+      .reports-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .station-card { border: 1px solid #ccc; break-inside: avoid; background: white; }
+      .card-summary { background: #f0f0f0 !important; }
+      .card-detail  { display: block !important; }
+      .card-station { color: #111 !important; }
+      .card-role, .card-station-name { color: #444 !important; }
+      .flight-cat   { border: 1px solid #999; color: #111 !important; background: #eee !important; }
+      .analysis-section { border-bottom: 1px solid #ddd; }
+      .analysis-section-label { color: #333 !important; opacity: 1; }
+      .metar-raw    { background: #f5f5f5; border: 1px solid #ddd; color: #333 !important; }
+      .metric       { background: #f5f5f5; border: 1px solid #ddd; }
+      .metric-label { color: #555 !important; }
+      .metric-value,
+      .metric-value.pass,
+      .metric-value.warn,
+      .metric-value.fail { color: #111 !important; }
+      .min-item   { background: #f5f5f5; }
+      .min-key    { color: #555 !important; }
+      .min-pass   { color: #15803D !important; }
+      .min-fail   { color: #B91C1C !important; }
+      .min-caution{ color: #B45309 !important; }
+      .min-na     { color: #666 !important; opacity: 1; }
+      .concern-item, .positive-item { color: #222 !important; border-bottom-color: #ddd; }
+      .taf-content { display: block !important; background: #f5f5f5; border: 1px solid #ddd; color: #333 !important; }
+      .taf-toggle  { display: none; }
+      .card-expand-hint { display: none; }
+      .logo-img { height: 40px; width: auto; filter: none; }
+      .logo-text .tool { color: #444 !important; }
+      .header-clock-utc { color: #333 !important; font-size: 16px; }
+      .header-clock-utc-label { color: #333 !important; opacity: 1; }
+      .header-clock-local { color: #555 !important; }
+      .header-meta-note { color: #888 !important; opacity: 1; }
+
+      /* ── Previously invisible print elements ── */
+      .raw-section-label { color: #444 !important; opacity: 1; }
+      .block-title { color: #444 !important; opacity: 1; }
+      .mins-title { color: #444 !important; opacity: 1; }
+      .analysis-period-label { color: #444 !important; opacity: 1; }
+      .analysis-section-label .time-tag { color: #444 !important; opacity: 1; }
+      .analysis-section-label .source-tag { color: #333 !important; opacity: 1; background: #eee; border-color: #ccc; }
+      .leg-time-label { color: #444 !important; opacity: 1; }
+      .leg-route-label { color: #111 !important; }
+      .leg-badge { color: #555 !important; background: #eee; border-color: #ccc; }
+      .leg-rec-badge { opacity: 1; }
+      .card-rec { opacity: 1; }
+      .card-rec.go      { background: #d1fae5 !important; color: #166534 !important; }
+      .card-rec.caution { background: #fef3c7 !important; color: #92400e !important; }
+      .card-rec.nogo    { background: #fee2e2 !important; color: #991b1b !important; }
+      .no-taf-notice { color: #555 !important; opacity: 1; }
+      .no-taf-notice a { color: #1d4ed8 !important; }
+      .card-role { color: #666 !important; opacity: 1; }
+      .analysis-section-label { color: #555 !important; opacity: 1; }
+      .raw-section { border-top: 1px solid #ddd; }
+      /* ── Flight Info & Currency ── */
+      #flightInfoPanel, #currencyPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      #flightInfoPanelBody, #currencyPanelBody { display: block !important; }
+      .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
+      .flight-info-field label { color: #555 !important; }
+      .currency-item { border-bottom-color: #ddd; }
+      .currency-label { color: #111 !important; }
+      .currency-desc { color: #555 !important; }
+      .currency-number, .currency-date { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
+      .currency-badge.current     { background: #d1fae5 !important; color: #166534 !important; }
+      .currency-badge.not-current { background: #fee2e2 !important; color: #991b1b !important; }
+      .currency-badge.unknown     { background: #f1f5f9 !important; color: #555 !important; }
+      .solo-endorsement-section.visible { display: block !important; }
+      /* ── Checklists ── */
+      #imsafePanel, #arrowPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      #imsafePanelBody, #arrowPanelBody { display: block !important; }
+      .panel-label { color: #333 !important; opacity: 1; cursor: default; }
+      .checklist-item { border-bottom-color: #ddd; }
+      .checklist-label { color: #111 !important; }
+      .checklist-desc { color: #555 !important; }
+      .checklist-notes { display: none; }
+      .checklist-status { opacity: 1; }
+      .checklist-status.complete   { background: #d1fae5; color: #166534; }
+      .checklist-status.incomplete { background: #fef3c7; color: #92400e; }
+      .solo-locked-note { display: none !important; }
+      .concern-item[style], .positive-item[style] { opacity: 1 !important; color: #555 !important; }
+      .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-block">
+      <img src="Logo.png" alt="Central Aviation" class="logo-img">
+      <div class="logo-text">
+        <div class="tool">Preflight</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="header-clock-utc" id="clockUtc">—<span class="header-clock-utc-label">Z</span></span>
+      <span class="header-clock-local" id="clockLocal">— Local</span>
+      <span class="header-meta-note">Internal Use Only</span>
+    </div>
+  </header>
+
+  <!-- Flight Info Panel -->
+  <div class="panel" id="flightInfoPanel">
+    <div class="panel-label open" id="flightInfoPanelLabel" onclick="togglePanel('flightInfo')">
+      <span class="toggle-arrow">▶</span>
+      Flight Information
+    </div>
+    <div class="panel-body open" id="flightInfoPanelBody">
+      <div class="flight-info-grid">
+        <div class="flight-info-field">
+          <label>PIC / CFI Name</label>
+          <input type="text" id="picName" placeholder="Full name" autocomplete="name">
+        </div>
+        <div class="flight-info-field">
+          <label>Student Name</label>
+          <input type="text" id="studentName" placeholder="Full name (if applicable)" autocomplete="off">
+        </div>
+        <div class="flight-info-field">
+          <label>Certificate / License No.</label>
+          <input type="text" id="picCert" placeholder="e.g. 1234567" autocomplete="off">
+        </div>
+        <div class="flight-info-field">
+          <label>Flight Date</label>
+          <input type="date" id="flightDate" color-scheme="dark">
+        </div>
+      </div>
+      <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(200,164,77,0.1); display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--slate); white-space:nowrap;">Flight Rules</span>
+        <div class="flight-rules-toggle">
+          <input type="radio" name="flightRules" id="frVFR" value="VFR" checked>
+          <label for="frVFR">VFR</label>
+          <input type="radio" name="flightRules" id="frIFR" value="IFR">
+          <label for="frIFR">IFR</label>
+          <input type="radio" name="flightRules" id="frSolo" value="SOLO">
+          <label for="frSolo">Student Solo</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Currency Panel -->
+  <div class="panel" id="currencyPanel">
+    <div class="panel-label" id="currencyPanelLabel" onclick="togglePanel('currency')">
+      <span class="toggle-arrow">▶</span>
+      Pilot Currency
+    </div>
+    <div class="panel-body" id="currencyPanelBody">
+
+      <!-- Day Landings -->
+      <div class="currency-item">
+        <div>
+          <div class="currency-label">Day Passenger Currency</div>
+          <div class="currency-desc">3 takeoffs and landings in the preceding 90 days — same category, class, and type (FAR 61.57a)</div>
+        </div>
+        <div class="currency-input-group">
+          <input type="number" class="currency-number" id="dayLandings" min="0" max="999" placeholder="0" oninput="updateCurrencyBadge('dayLandings', 3, 'dayBadge')">
+          <div class="currency-badge unknown" id="dayBadge">—</div>
+        </div>
+      </div>
+
+      <!-- Night Landings -->
+      <div class="currency-item">
+        <div>
+          <div class="currency-label">Night Passenger Currency</div>
+          <div class="currency-desc">3 takeoffs and full-stop landings between 1hr after sunset and 1hr before sunrise in the preceding 90 days (FAR 61.57b)</div>
+        </div>
+        <div class="currency-input-group">
+          <input type="number" class="currency-number" id="nightLandings" min="0" max="999" placeholder="0" oninput="updateCurrencyBadge('nightLandings', 3, 'nightBadge')">
+          <div class="currency-badge unknown" id="nightBadge">—</div>
+        </div>
+      </div>
+
+      <!-- IFR Currency -->
+      <div class="currency-item">
+        <div>
+          <div class="currency-label">IFR Currency</div>
+          <div class="currency-desc">6 instrument approaches, holding, and intercepting/tracking within the preceding 6 calendar months (FAR 61.57c)</div>
+        </div>
+        <div class="currency-input-group">
+          <input type="number" class="currency-number" id="ifrApproaches" min="0" max="999" placeholder="0" oninput="updateCurrencyBadge('ifrApproaches', 6, 'ifrBadge')">
+          <div class="currency-badge unknown" id="ifrBadge">—</div>
+        </div>
+      </div>
+
+      <!-- Flight Review -->
+      <div class="currency-item">
+        <div>
+          <div class="currency-label">Flight Review</div>
+          <div class="currency-desc">Flight review within the preceding 24 calendar months — 1hr ground, 1hr flight with a CFI (FAR 61.56). Enter date of last review.</div>
+        </div>
+        <div class="currency-input-group">
+          <input type="date" class="currency-date" id="flightReviewDate" oninput="updateFlightReviewBadge()">
+          <div class="currency-badge unknown" id="flightReviewBadge">—</div>
+        </div>
+      </div>
+
+      <!-- Solo Endorsement — only visible in Student Solo mode -->
+      <div class="solo-endorsement-section" id="soloEndorsementSection">
+        <div class="checklist-item">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-solo-endorsement" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">Student Solo Endorsement</div>
+            <div class="checklist-desc">I confirm my solo endorsement is current, valid for this aircraft category/class, and authorises flight in today's conditions. Endorsement is recorded in my logbook (FAR 61.87).</div>
+            <textarea class="checklist-notes" id="soloEndorsementNotes" placeholder="CFI name, endorsement date, conditions/limitations noted..." rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- IMSAFE Panel (collapsible) -->
+  <div class="panel" id="imsafePanel">
+    <div class="panel-label" id="imsafePanelLabel" onclick="togglePanel('imsafe')">
+      <span class="toggle-arrow">▶</span>
+      IMSAFE — Pilot Self-Assessment
+    </div>
+    <div class="panel-body" id="imsafePanelBody">
+      <div id="imsafeChecklist">
+
+        <div class="checklist-item" id="imsafe-I">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-I" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">I — Illness</div>
+            <div class="checklist-desc">Am I suffering from any illness, symptom, or physical condition that might affect my ability to fly safely?</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="imsafe-M">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-M" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">M — Medication</div>
+            <div class="checklist-desc">Am I taking any prescription or over-the-counter drugs that could affect my judgement, alertness, or coordination?</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="imsafe-S">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-S" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">S — Stress</div>
+            <div class="checklist-desc">Am I under psychological pressure from work, financial concerns, health, or personal relationships that could distract me?</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="imsafe-A">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-A" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">A — Alcohol</div>
+            <div class="checklist-desc">Have I consumed alcohol within the last 8 hours? Am I within FAA limits (0.04% BAC)? 8 hours bottle-to-throttle minimum.</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="imsafe-F">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-F" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">F — Fatigue</div>
+            <div class="checklist-desc">Am I well-rested? Fatigue is one of the most common and dangerous factors in aviation accidents. Have I had adequate sleep?</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="imsafe-E">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-imsafe-E" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">E — Emotion / Eating</div>
+            <div class="checklist-desc">Am I emotionally stable and mentally prepared to fly? Have I eaten adequately to maintain focus and energy throughout the flight?</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+      </div>
+      <div id="imsafeStatus" class="checklist-status incomplete">0 / 6 COMPLETE</div>
+    </div>
+  </div>
+
+  <!-- AROW Panel (collapsible) -->
+  <div class="panel" id="arrowPanel">
+    <div class="panel-label" id="arrowPanelLabel" onclick="togglePanel('arrow')">
+      <span class="toggle-arrow">▶</span>
+      AROW — Aircraft Documents
+    </div>
+    <div class="panel-body" id="arrowPanelBody">
+      <div id="arrowChecklist">
+
+        <div class="checklist-item" id="arrow-A">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-arrow-A" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">A — Airworthiness Certificate</div>
+            <div class="checklist-desc">Is the current airworthiness certificate on board and displayed? Aircraft must be airworthy for flight (14 CFR 91.203).</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="arrow-R">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-arrow-R" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">R — Registration Certificate</div>
+            <div class="checklist-desc">Is the current aircraft registration on board? Registration must be current and match the aircraft (14 CFR 91.203).</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="arrow-O">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-arrow-O" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">O — Operating Limitations</div>
+            <div class="checklist-desc">Are the operating limitations on board and accessible? This includes the FAA-approved AFM/POH, required placards, instrument markings, and compliance with applicable Airworthiness Directives (14 CFR 91.9).</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+        <div class="checklist-item" id="arrow-W">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-arrow-W" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">W — Weight & Balance</div>
+            <div class="checklist-desc">Have current W&B data been computed for this flight? Aircraft must be loaded within CG limits for all phases of flight.</div>
+            <textarea class="checklist-notes" placeholder="Notes (optional)..." rows="1"></textarea>
+          </div>
+        </div>
+
+      </div>
+      <div id="arrowStatus" class="checklist-status incomplete">0 / 4 COMPLETE</div>
+    </div>
+  </div>
+
+  <!-- Personal Minimums Panel (collapsible, hidden by default) -->
+  <div class="panel" id="minimumsPanel">
+    <div class="panel-label" id="minimumsPanelLabel" onclick="togglePanel('minimums')">
+      <span class="toggle-arrow">▶</span>
+      Personal Minimums
+    </div>
+    <div class="panel-body" id="minimumsPanelBody">
+      <div class="mins-inputs">
+        <div class="mins-field">
+          <label>Min Visibility (SM)</label>
+          <input type="number" id="minVis" value="5" min="0" step="0.5">
+        </div>
+        <div class="mins-field">
+          <label>Min Ceiling (ft)</label>
+          <input type="number" id="minCeil" value="2500" min="0" step="100">
+        </div>
+        <div class="mins-field">
+          <label>Max Crosswind (kts)</label>
+          <input type="number" id="maxXwd" value="12" min="0" step="1">
+        </div>
+        <div class="mins-field">
+          <label>Max Gusts (kts)</label>
+          <input type="number" id="maxGust" value="18" min="0" step="1">
+        </div>
+        <div class="mins-field">
+          <label>DA Caution (ft)</label>
+          <input type="number" id="cautionDA" value="3000" min="0" step="500">
+        </div>
+        <div class="mins-field">
+          <label>DA No-Go (ft)</label>
+          <input type="number" id="noGoDA" value="5000" min="0" step="500">
+        </div>
+      </div>
+      <button class="mins-reset" id="minsResetBtn" onclick="resetMinimums()">Reset to defaults</button>
+      <div class="solo-locked-note" id="soloLockedNote">⚠ Student Solo — minimums locked to FAR 61.89 (3SM visibility, 1,000ft ceiling). Not adjustable.</div>
+    </div>
+  </div>
+
+  <!-- Flight Plan Panel -->
+  <div class="panel">
+    <div class="panel-label" style="cursor:default; pointer-events:none;">
+      Flight Plan
+    </div>
+    <div class="panel-body-always">
+      <div class="plan-header">
+        <span class="tz-label">Timezone</span>
+        <select class="tz-select" id="tzSelect">
+          <option value="America/New_York">Eastern (ET)</option>
+          <option value="America/Chicago">Central (CT)</option>
+          <option value="America/Denver">Mountain (MT)</option>
+          <option value="America/Phoenix">Arizona (MST)</option>
+          <option value="America/Los_Angeles">Pacific (PT)</option>
+          <option value="America/Anchorage">Alaska (AKT)</option>
+          <option value="America/Adak">Aleutian (HAT)</option>
+          <option value="Pacific/Honolulu">Hawaii (HT)</option>
+          <option value="America/Halifax">Atlantic (AT)</option>
+          <option value="America/Toronto">Toronto (ET)</option>
+          <option value="America/Vancouver">Vancouver (PT)</option>
+        </select>
+      </div>
+
+      <div id="legsContainer"></div>
+
+      <div class="legs-actions">
+        <button class="btn-add-leg" onclick="addLeg()"><span>＋</span> Add Leg</button>
+        <span class="leg-count-note" id="legCountNote"></span>
+      </div>
+
+      <button class="btn-brief" id="briefBtn" onclick="getBriefing()">
+        <span class="btn-text">Request Briefing</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="trip-verdict" id="tripVerdict">
+    <div class="verdict-header">
+      <div class="verdict-icon" id="verdictIcon"></div>
+      <div>
+        <div class="verdict-title">Trip Go / No-Go</div>
+        <div class="verdict-rec" id="verdictRec"></div>
+      </div>
+    </div>
+    <div class="verdict-route" id="verdictRoute"></div>
+  </div>
+
+  <div class="actions-bar" id="actionsBar">
+    <button class="btn-action" onclick="window.print()">Print Report</button>
+    <button class="btn-action" onclick="saveReport()">Save as Text</button>
+  </div>
+
+  <div id="legReports"></div>
+
+  <footer>
+    <div class="disclaimer">
+      This report is generated automatically and does not replace an official pilot weather briefing.
+      Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.
+      Central Aviation · Internal Use Only
+    </div>
+    <img src="Logo.png" alt="Central Aviation" style="height:32px;width:auto;opacity:0.4;margin-left:24px;flex-shrink:0;">
+  </footer>
+
+</div>
+
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRVu18oSRhNup9-jjDKYc3uuH5mW8j-lTv6-4s38KOUsWfOqDSzajmvgxuRcpQ20bB/exec';
+
+  const DEFAULT_MINS = { minVis: 5, minCeil: 2500, maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
+  const IFR_MINS     = { minVis: 1, minCeil: 200,  maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
+  // FAR 61.89 student solo minimums — 3SM visibility, 1,000ft ceiling
+  const SOLO_MINS    = { minVis: 3, minCeil: 1000, maxXwd: 12, maxGust: 18, cautionDA: 3000, noGoDA: 5000 };
+
+  // ── CLOCK ──
+  function updateClock() {
+    const now = new Date();
+    const tz  = document.getElementById('tzSelect')?.value || 'America/New_York';
+    const local = now.toLocaleString('en-US', {
+      timeZone: tz,
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+    const utc = now.toISOString().slice(11, 19);
+    const tzLabel = tzAbbr(tz);
+
+    const utcEl   = document.getElementById('clockUtc');
+    const localEl = document.getElementById('clockLocal');
+    if (utcEl)   utcEl.innerHTML   = `${utc}<span class="header-clock-utc-label">Z</span>`;
+    if (localEl) localEl.textContent = `${local} ${tzLabel}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── TIMEZONE ──
+  // Auto-detect and set timezone selector to browser local
+  (function detectTz() {
+    try {
+      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const sel = document.getElementById('tzSelect');
+      for (const opt of sel.options) {
+        if (opt.value === localTz) { sel.value = localTz; break; }
+      }
+    } catch(_) {}
+  })();
+
+  document.getElementById('tzSelect').addEventListener('change', () => {
+    updateAllDepTimes();
+  });
+
+  // ── PANEL TOGGLE ──
+  function togglePanel(id) {
+    const label = document.getElementById(id + 'sPanelLabel') ||
+                  document.getElementById(id + 'PanelLabel');
+    const body  = document.getElementById(id + 'sPanelBody') ||
+                  document.getElementById(id + 'PanelBody');
+    if (!label || !body) return;
+    label.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  // ── CHECKLISTS ──
+  function updateChecklistItem(checkbox) {
+    const item = checkbox.closest('.checklist-item');
+    if (checkbox.checked) {
+      item.classList.add('checked');
+    } else {
+      item.classList.remove('checked');
+    }
+    updateChecklistStatus(checkbox.closest('.panel-body'));
+  }
+
+  function updateChecklistStatus(panelBody) {
+    const checkboxes = panelBody.querySelectorAll('input[type="checkbox"]');
+    const total      = checkboxes.length;
+    const checked    = [...checkboxes].filter(c => c.checked).length;
+    const statusEl   = panelBody.querySelector('.checklist-status');
+    if (!statusEl) return;
+    statusEl.textContent = `${checked} / ${total} COMPLETE`;
+    statusEl.className   = 'checklist-status ' + (checked === total ? 'complete' : 'incomplete');
+  }
+
+  function getChecklistData(panelBodyId) {
+    const body  = document.getElementById(panelBodyId);
+    if (!body) return [];
+    const items = body.querySelectorAll('.checklist-item');
+    return [...items].map(item => ({
+      label:   item.querySelector('.checklist-label')?.textContent?.trim() || '',
+      checked: item.querySelector('input[type="checkbox"]')?.checked || false,
+      notes:   item.querySelector('.checklist-notes')?.value?.trim() || '',
+    }));
+  }
+
+  // ── CURRENCY ──
+  function updateCurrencyBadge(inputId, required, badgeId) {
+    const input  = document.getElementById(inputId);
+    const badge  = document.getElementById(badgeId);
+    const val    = parseInt(input.value);
+    if (!input.value || isNaN(val)) {
+      badge.textContent = '—';
+      badge.className   = 'currency-badge unknown';
+    } else if (val >= required) {
+      badge.textContent = 'CURRENT';
+      badge.className   = 'currency-badge current';
+    } else {
+      badge.textContent = 'NOT CURRENT';
+      badge.className   = 'currency-badge not-current';
+    }
+  }
+
+  function updateFlightReviewBadge() {
+    const val   = document.getElementById('flightReviewDate').value;
+    const badge = document.getElementById('flightReviewBadge');
+    if (!val) {
+      badge.textContent = '—';
+      badge.className   = 'currency-badge unknown';
+      return;
+    }
+    // Use noon UTC to avoid off-by-one from timezone interpretation
+    const reviewDate = new Date(val + 'T12:00:00Z');
+    const cutoff     = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 24);
+    if (reviewDate >= cutoff) {
+      badge.textContent = 'CURRENT';
+      badge.className   = 'currency-badge current';
+    } else {
+      badge.textContent = 'NOT CURRENT';
+      badge.className   = 'currency-badge not-current';
+    }
+  }
+
+  // Show/hide solo endorsement section based on flight rules mode
+  function updateSoloEndorsementVisibility() {
+    const mode    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    const section = document.getElementById('soloEndorsementSection');
+    if (section) section.classList.toggle('visible', mode === 'SOLO');
+  }
+
+  document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
+    radio.addEventListener('change', updateSoloEndorsementVisibility);
+  });
+
+  // Set today's date as default for flight date
+  (function setDefaultFlightDate() {
+    const el = document.getElementById('flightDate');
+    if (el) el.value = new Date().toISOString().slice(0, 10);
+  })();
+
+  // ── MINIMUMS ──
+  function resetMinimums() {
+    const mode  = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    const isSolo = mode === 'SOLO';
+    const isIFR  = mode === 'IFR';
+    const m = isSolo ? SOLO_MINS : isIFR ? IFR_MINS : DEFAULT_MINS;
+
+    document.getElementById('minVis').value    = m.minVis;
+    document.getElementById('minCeil').value   = m.minCeil;
+    document.getElementById('maxXwd').value    = m.maxXwd;
+    document.getElementById('maxGust').value   = m.maxGust;
+    document.getElementById('cautionDA').value = m.cautionDA;
+    document.getElementById('noGoDA').value    = m.noGoDA;
+
+    // Lock all minimums fields in Solo mode — enforce 61.89 as floor, CFI may tighten
+    const fields = ['minVis','minCeil','maxXwd','maxGust','cautionDA','noGoDA'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (isSolo) {
+        el.removeAttribute('readonly');
+        el.style.opacity = '';
+        el.style.cursor  = '';
+        el.dataset.soloFloor = m[id] !== undefined ? m[id] : SOLO_MINS[id];
+      } else {
+        delete el.dataset.soloFloor;
+        el.style.opacity = '';
+        el.style.cursor  = '';
+      }
+    });
+    document.getElementById('minsResetBtn').style.display   = '';
+    document.getElementById('soloLockedNote').style.display = isSolo ? 'block' : 'none';
+    document.getElementById('soloLockedNote').textContent   = isSolo
+      ? '⚠ Student Solo — FAR 61.89 minimums enforced as floor (3SM visibility, 1,000ft ceiling). CFI may set stricter values but not lower.'
+      : '';
+  }
+
+  // Update minimums defaults when flight rules toggle changes
+  document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
+    radio.addEventListener('change', resetMinimums);
+  });
+
+  function getMinimums() {
+    const isSolo = document.querySelector('input[name="flightRules"]:checked')?.value === 'SOLO';
+    function parseMins(id, fallback) {
+      const el    = document.getElementById(id);
+      const n     = parseFloat(el.value);
+      const floor = isSolo && el.dataset.soloFloor !== undefined ? parseFloat(el.dataset.soloFloor) : null;
+      const val   = isNaN(n) ? fallback : n;
+      // In Solo mode, never allow value below the 61.89 floor
+      // For visibility/ceiling (higher = stricter): enforce minimum
+      // For crosswind/gust (lower = stricter): enforce maximum
+      if (floor !== null) {
+        if (id === 'minVis' || id === 'minCeil') return Math.max(val, floor);
+        if (id === 'maxXwd' || id === 'maxGust') return Math.min(val, floor);
+      }
+      return val;
+    }
+    return {
+      minVis:    parseMins('minVis',    DEFAULT_MINS.minVis),
+      minCeil:   parseMins('minCeil',   DEFAULT_MINS.minCeil),
+      maxXwd:    parseMins('maxXwd',    DEFAULT_MINS.maxXwd),
+      maxGust:   parseMins('maxGust',   DEFAULT_MINS.maxGust),
+      cautionDA: parseMins('cautionDA', DEFAULT_MINS.cautionDA),
+      noGoDA:    parseMins('noGoDA',    DEFAULT_MINS.noGoDA),
+    };
+  }
+
+  // ── TIME HELPERS ──
+  function nowInTz(tz) {
+    // Returns ISO local string suitable for datetime-local input
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(now);
+    const p = {};
+    parts.forEach(x => { p[x.type] = x.value; });
+    // Round down to nearest 5 minutes
+    let min = parseInt(p.minute);
+    min = Math.floor(min / 5) * 5;
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${String(min).padStart(2,'0')}`;
+  }
+
+  function localToUtcIso(localStr, tz) {
+    if (!localStr) return new Date().toISOString();
+    const [datePart, timePart] = localStr.split('T');
+    const [year, month, day]   = datePart.split('-').map(Number);
+    const [hour, minute]       = timePart.split(':').map(Number);
+    // Parse as if UTC first to avoid any browser timezone interpretation,
+    // then adjust by the selected timezone offset to get true UTC
+    const asIfUtcMs = Date.UTC(year, month - 1, day, hour, minute);
+    const tempDate  = new Date(asIfUtcMs);
+    const tzOffset  = getTzOffsetMinutes(tz, tempDate);
+    return new Date(asIfUtcMs - tzOffset * 60000).toISOString();
+  }
+
+  function getTzOffsetMinutes(tz, date) {
+    const utcDate   = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate    = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+    return (tzDate - utcDate) / 60000;
+  }
+
+  function formatUtcForDisplay(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toISOString().slice(11,16) + 'Z';
+  }
+
+  function formatLocalForDisplay(isoStr, tz) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toLocaleString('en-US', {
+      timeZone: tz,
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+  }
+
+  // ── LEG MANAGEMENT ──
+
+  // Parses a datetime-local string ("YYYY-MM-DDTHH:MM") to minutes since
+  // a fixed epoch, with no timezone conversion — purely for relative arithmetic.
+  function depTimeToMs(localStr) {
+    if (!localStr) return NaN;
+    const [datePart, timePart] = localStr.split('T');
+    if (!datePart || !timePart) return NaN;
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute]     = timePart.split(':').map(Number);
+    // Treat as UTC to avoid any browser timezone offset
+    return Date.UTC(year, month - 1, day, hour, minute);
+  }
+
+  // Formats a millisecond value back to a datetime-local string ("YYYY-MM-DDTHH:MM").
+  // Must be the inverse of depTimeToMs — interprets ms as UTC, no timezone conversion.
+  function msToDepTimeStr(ms) {
+    const d = new Date(ms);
+    const year   = d.getUTCFullYear();
+    const month  = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day    = String(d.getUTCDate()).padStart(2, '0');
+    const hour   = String(d.getUTCHours()).padStart(2, '0');
+    const minute = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hour}:${minute}`;
+  }
+
+  // Parses flight time string to total minutes.
+  // Accepts "1:30" (H:MM), "1.5" (decimal hours), or plain integer as minutes.
+  // Plain integers are always treated as minutes — use H:MM for hours.
+  function parseFlightTime(str) {
+    if (!str) return 0;
+    str = str.trim();
+    if (str.includes(':')) {
+      const [h, m] = str.split(':').map(Number);
+      if (isNaN(h) || isNaN(m) || m >= 60) return NaN;
+      return h * 60 + m;
+    }
+    const n = parseFloat(str);
+    if (isNaN(n) || n < 0) return NaN;
+    // Decimal hours e.g. 1.5
+    if (str.includes('.')) return Math.round(n * 60);
+    // Plain integer always treated as minutes
+    return Math.round(n);
+  }
+
+  // Normalises flight time input to H:MM on blur.
+  // Adds red border if value is unrecognised.
+  function normaliseFlightTime(input) {
+    const val = input.value.trim();
+    if (!val) {
+      input.style.borderColor = '';
+      return;
+    }
+    const mins = parseFlightTime(val);
+    if (isNaN(mins) || mins < 0) {
+      input.style.borderColor = 'var(--red)';
+      return;
+    }
+    input.style.borderColor = '';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    input.value = `${h}:${String(m).padStart(2, '0')}`;
+    recalculateDepTimes();
+  }
+
+  // Recalculates departure times for all legs after the first.
+  function recalculateDepTimes() {
+    const tz   = document.getElementById('tzSelect').value;
+    const rows = document.querySelectorAll('.leg-row');
+
+    rows.forEach((row, i) => {
+      if (i === 0) return;
+
+      const depInput = row.querySelector('.dep-time-input');
+      if (depInput.dataset.manual) return;
+
+      const prevRow  = rows[i - 1];
+      const prevDep  = prevRow.querySelector('.dep-time-input').value;
+      const totalMin = parseFlightTime(prevRow.querySelector('.flight-time-input').value);
+
+      if (!totalMin || isNaN(totalMin)) return;
+
+      const ms = depTimeToMs(prevDep);
+      if (isNaN(ms)) return;
+
+      depInput.value = msToDepTimeStr(ms + totalMin * 60000);
+    });
+  }
+
+  function addLeg() {
+    const container = document.getElementById('legsContainer');
+    const nextNum   = container.querySelectorAll('.leg-row').length + 1;
+    const tz        = document.getElementById('tzSelect').value;
+    const isFirst   = nextNum === 1;
+
+    const row = document.createElement('div');
+    row.className = 'leg-row';
+    row.dataset.leg = nextNum;
+    row.dataset.legLabel = `LEG ${nextNum}`;
+
+    row.innerHTML = `
+      <div class="leg-row-top">
+        <div class="leg-number">LEG ${nextNum}</div>
+        <div class="leg-field">
+          <label>${isFirst ? 'Departure' : 'From'}</label>
+          <input type="text" maxlength="4" placeholder="ICAO"
+                 autocomplete="off" spellcheck="false"
+                 oninput="formatStation(this)"
+                 onkeydown="handleKey(event)">
+        </div>
+        <div class="leg-arrow">→</div>
+        <div class="leg-field">
+          <label>${isFirst ? 'Arrival' : 'To'}</label>
+          <input type="text" maxlength="4" placeholder="ICAO"
+                 autocomplete="off" spellcheck="false"
+                 oninput="formatStation(this)"
+                 onkeydown="handleKey(event)">
+        </div>
+        <button class="btn-remove-leg" onclick="removeLeg(this)" title="Remove leg">✕</button>
+      </div>
+      <div class="leg-row-bottom">
+        <div class="leg-field">
+          <label>Departure Time</label>
+          <input type="datetime-local" class="dep-time-input"
+                 value="${isFirst ? nowInTz(tz) : ''}"
+                 oninput="this.dataset.manual='1'">
+        </div>
+        <div class="leg-field">
+          <label>Flight Time (H:MM or min)</label>
+          <input type="text" class="flight-time-input" placeholder="1:30 or 90"
+                 maxlength="5" autocomplete="off"
+                 oninput="recalculateDepTimes()"
+                 onblur="normaliseFlightTime(this)">
+        </div>
+        <div style="padding-bottom:10px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--slate); opacity:0.5; align-self:flex-end;">
+          arrival time<br>auto-calculated
+        </div>
+      </div>
+    `;
+
+    container.appendChild(row);
+    updateLegUI();
+    recalculateDepTimes();
+    row.querySelectorAll('input')[0].focus();
+  }
+
+  function removeLeg(btn) {
+    btn.closest('.leg-row').remove();
+    renumberLegs();
+    // Clear manual flags so the chain recalculates cleanly after removal
+    document.querySelectorAll('.dep-time-input').forEach(input => {
+      delete input.dataset.manual;
+    });
+    recalculateDepTimes();
+    updateLegUI();
+  }
+
+  function renumberLegs() {
+    document.querySelectorAll('.leg-row').forEach((row, i) => {
+      row.dataset.leg = i + 1;
+      row.dataset.legLabel = `LEG ${i + 1}`;
+      row.querySelector('.leg-number').textContent = `LEG ${i + 1}`;
+      const labels = row.querySelectorAll('.leg-row-top label');
+      labels[0].textContent = i === 0 ? 'Departure' : 'From';
+      labels[1].textContent = i === 0 ? 'Arrival'   : 'To';
+    });
+  }
+
+  function updateLegUI() {
+    const rows  = document.querySelectorAll('.leg-row');
+    const count = rows.length;
+    rows.forEach(row => {
+      row.querySelector('.btn-remove-leg').style.visibility =
+        count === 1 ? 'hidden' : 'visible';
+    });
+    document.getElementById('legCountNote').textContent =
+      count > 1 ? `${count} legs` : '';
+  }
+
+  function updateAllDepTimes() {
+    const tz = document.getElementById('tzSelect').value;
+    document.querySelectorAll('.dep-time-input').forEach(input => {
+      // Only update if value looks like "now" (within 10 min of current)
+      const current = new Date(input.value);
+      const now     = new Date();
+      if (Math.abs(now - current) < 600000) {
+        input.value = nowInTz(tz);
+      }
+    });
+  }
+
+  function formatStation(input) {
+    input.value = input.value.toUpperCase().replace(/[^A-Z]/g, '');
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter') getBriefing();
+  }
+
+  addLeg(); // Initialize with one leg
+
+  // ── BRIEFING ──
+  async function getBriefing() {
+    const btn = document.getElementById('briefBtn');
+    const err = document.getElementById('errorMsg');
+    err.style.display = 'none';
+
+    const tz          = document.getElementById('tzSelect').value;
+    const mins        = getMinimums();
+    const flightRulesMode = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    // Backend only knows VFR/IFR — Solo uses VFR weather analysis with stricter minimums
+    const flightRules     = flightRulesMode === 'IFR' ? 'IFR' : 'VFR';
+    const legs            = [];
+    let   hasError    = false;
+
+    // Clear all previous leg departure errors
+    document.querySelectorAll('.leg-dep-error').forEach(el => el.remove());
+    document.querySelectorAll('.dep-time-input').forEach(el => el.style.borderColor = '');
+
+    for (const row of document.querySelectorAll('.leg-row')) {
+      const inputs   = row.querySelectorAll('input[type="text"]');
+      const dep      = inputs[0].value.trim();
+      const arr      = inputs[1].value.trim();
+
+      if (dep.length < 3 || arr.length < 3) {
+        showError(`Leg ${row.dataset.leg}: Enter valid ICAO identifiers for both stations.`);
+        return;
+      }
+
+      const depTimeLocal  = row.querySelector('.dep-time-input').value;
+      const flightTimeVal = row.querySelector('.flight-time-input').value;
+      const totalMin      = parseFlightTime(flightTimeVal);
+      const depTimeUtc    = localToUtcIso(depTimeLocal, tz);
+
+      // Block if flight time is present but invalid
+      if (flightTimeVal.trim() && isNaN(totalMin)) {
+        const ftInput = row.querySelector('.flight-time-input');
+        ftInput.style.borderColor = 'var(--red)';
+        showError(`Leg ${row.dataset.leg}: Invalid flight time — use H:MM (e.g. 1:30) or minutes (e.g. 90).`);
+        return;
+      }
+
+      // Block if departure time is more than 5 minutes in the past
+      if (new Date(depTimeUtc) < new Date(Date.now() - 5 * 60000)) {
+        const depInput = row.querySelector('.dep-time-input');
+        depInput.style.borderColor = 'var(--red)';
+        const legErr = document.createElement('div');
+        legErr.className = 'leg-dep-error';
+        legErr.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:10px;color:#F87171;margin-top:6px;padding:0 2px;';
+        legErr.textContent = `❌ Leg ${row.dataset.leg}: Departure time is in the past — please update.`;
+        row.querySelector('.leg-row-bottom').after(legErr);
+        hasError = true;
+      }
+
+      legs.push({
+        departure:    dep,
+        arrival:      arr,
+        depTimeUtc:   depTimeUtc,
+        depTimeLocal: depTimeLocal,
+        flightMin:    totalMin > 0 ? totalMin : null,
+      });
+    }
+
+    if (hasError) {
+      showError('One or more departure times are in the past. Please correct them before requesting a briefing.');
+      return;
+    }
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    document.getElementById('legReports').innerHTML = '';
+    document.getElementById('tripVerdict').style.display = 'none';
+    document.getElementById('actionsBar').classList.remove('visible');
+
+    try {
+      const legsParam       = legs.map(l => `${l.departure},${l.arrival}`).join('|');
+      const depTimesParam   = legs.map(l => l.depTimeUtc).join('|');
+      const flightTimesParam = legs.map(l => l.flightMin !== null ? l.flightMin : '').join('|');
+
+      const params = new URLSearchParams({
+        legs:           legsParam,
+        departureTimes: depTimesParam,
+        flightTimes:    flightTimesParam,
+        flightRules:    flightRules,
+        minVis:         mins.minVis,
+        minCeil:        mins.minCeil,
+        maxXwd:         mins.maxXwd,
+        maxGust:        mins.maxGust,
+        cautionDA:      mins.cautionDA,
+        noGoDA:         mins.noGoDA,
+      });
+
+      const res  = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
+      const data = await res.json();
+
+      if (data.error) { showError(`API Error: ${data.error}`); return; }
+      renderResults(data, legs, tz, flightRules, flightRulesMode);
+
+    } catch(e) {
+      showError(`Request failed. Check your connection or try again. (${e.message})`);
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  // ── RENDER ──
+  function renderResults(data, legs, tz, flightRules, flightRulesMode) {
+    const legReports = document.getElementById('legReports');
+    const verdict    = document.getElementById('tripVerdict');
+    legReports.innerHTML = '';
+
+    const allRecs = data.legs.flatMap(l => l.reports.map(r => r.recommendation));
+    const tripRec = deriveTripRec(allRecs);
+
+    verdict.className = 'trip-verdict ' + tripClass(tripRec);
+    verdict.style.display = 'block';
+    document.getElementById('verdictIcon').textContent = tripIcon(tripRec);
+    document.getElementById('verdictRec').textContent  = tripRec;
+    document.getElementById('verdictRoute').textContent =
+      legs.map(l => `${l.departure}→${l.arrival}`).join('  ·  ') +
+      `  ·  ${new Date().toLocaleString('en-US', { timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:false })} ${tzAbbr(tz)}`;
+
+    data.legs.forEach((leg, i) => {
+      const legRec  = deriveTripRec(leg.reports.map(r => r.recommendation));
+      const recCls  = legClass(legRec);
+
+      const depDisplay = legs[i].flightMin
+        ? `DEP ${formatLocalForDisplay(leg.departureTime, tz)} · ARR ${formatLocalForDisplay(leg.arrivalTime, tz)} ${tzAbbr(tz)} · ${legs[i].flightMin}min`
+        : `DEP ${formatLocalForDisplay(leg.departureTime, tz)} ${tzAbbr(tz)}`;
+
+      const section = document.createElement('div');
+      section.className = 'leg-section';
+      section.innerHTML = `
+        <div class="leg-section-header">
+          <span class="leg-badge">Leg ${i + 1}</span>
+          <span class="leg-route-label">${legs[i].departure} → ${legs[i].arrival}</span>
+          <span class="leg-time-label">${depDisplay}</span>
+          <span class="leg-rec-badge leg-rec-${recCls}">${legRec}</span>
+        </div>
+        <div class="reports-grid" id="legGrid${i}"></div>
+      `;
+      legReports.appendChild(section);
+
+      const grid = document.getElementById(`legGrid${i}`);
+      leg.reports.forEach((r, j) => {
+        const role = j === 0 ? 'Departure' : j === 1 ? 'Arrival' : `Stop ${j + 1}`;
+        grid.appendChild(buildCard(r, role, leg, tz, flightRules));
+      });
+    });
+
+    document.getElementById('actionsBar').classList.add('visible');
+    window._lastData        = data;
+    window._lastLegs        = legs;
+    window._lastTz          = tz;
+    window._lastFlightRules = flightRulesMode || flightRules;
+  }
+
+  // ── RECOMMENDATION HELPERS ──
+  function deriveTripRec(recs) {
+    const filtered = recs.filter(r => r);
+    if (filtered.some(r => r.includes('VFR NOT LEGAL'))) return 'NO-GO — VFR NOT LEGAL AT ONE OR MORE STATIONS';
+    if (filtered.some(r => r.startsWith('NO-GO')))       return 'NO-GO — BELOW MINIMUMS AT ONE OR MORE STATIONS';
+    if (filtered.some(r => r.includes('CAUTION')))       return 'GO WITH CAUTION — REVIEW ALL STATION CONCERNS';
+    return 'GO — CONDITIONS ACCEPTABLE AT ALL STATIONS';
+  }
+
+  function tripClass(rec) {
+    if (rec.startsWith('NO-GO'))  return 'nogo';
+    if (rec.includes('CAUTION'))  return 'caution';
+    return 'go';
+  }
+
+  function legClass(rec) {
+    if (rec.startsWith('NO-GO'))  return 'nogo';
+    if (rec.includes('CAUTION'))  return 'caution';
+    return 'go';
+  }
+
+  function tripIcon(rec) {
+    if (rec.startsWith('NO-GO'))  return '✖';
+    if (rec.includes('CAUTION'))  return '⚠';
+    return '✔';
+  }
+
+  function recClass(rec) {
+    if (!rec) return 'go';
+    if (rec.startsWith('NO-GO'))  return 'nogo';
+    if (rec.includes('CAUTION'))  return 'caution';
+    return 'go';
+  }
+
+  function tzAbbr(tz) {
+    const abbrs = {
+      'America/New_York':   'ET',
+      'America/Chicago':    'CT',
+      'America/Denver':     'MT',
+      'America/Phoenix':    'MST',
+      'America/Los_Angeles':'PT',
+      'America/Anchorage':  'AKT',
+      'America/Adak':       'HAT',
+      'Pacific/Honolulu':   'HT',
+      'America/Halifax':    'AT',
+      'America/Toronto':    'ET',
+      'America/Vancouver':  'PT',
+    };
+    return abbrs[tz] || 'LT';
+  }
+
+  // ── CARD BUILDER ──
+  function buildCard(r, role, leg, tz, flightRules) {
+    const card = document.createElement('div');
+    card.className = 'station-card';
+
+    const depA  = r.departureAnalysis;
+    const arrA  = r.arrivalAnalysis;
+    const recCls = recClass(r.recommendation);
+
+    // Flight category from departure analysis (most current)
+    const catClass = {'VFR':'cat-vfr','MVFR':'cat-mvfr','IFR':'cat-ifr','LIFR':'cat-lifr'}[depA.flightCategory] || 'cat-unknown';
+
+    // Source of no-go — current conditions vs arrival forecast
+    const arrivalRec  = arrA ? arrA.recommendation : null;
+    const noGoSource  = r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')
+      ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--slate);opacity:0.7;display:block;margin-top:3px;">current conditions only</span>'
+      : '';
+
+    // Summary section (always visible)
+    const summaryHtml = `
+      <div class="card-summary" id="summary-${r.station}-${role.replace(' ','')}" onclick="toggleCard(this)">
+        <div class="card-summary-top">
+          <div class="card-station-block">
+            <div class="card-role">${role}</div>
+            <div class="card-station">${r.station}</div>
+            <div class="card-station-name">${r.stationName || ''}</div>
+          </div>
+          <div class="card-summary-right">
+            <div class="flight-cat ${catClass}">${depA.flightCategory || '—'}</div>
+            ${flightRules === 'IFR'  ? '<div class="flight-cat cat-ifr"  style="font-size:10px;padding:2px 8px;">IFR</div>'  : ''}
+            ${flightRules === 'SOLO' ? '<div class="flight-cat cat-mvfr" style="font-size:10px;padding:2px 8px;">SOLO</div>' : ''}
+            <div class="card-rec ${recCls}">${r.recommendation}${noGoSource}</div>
+          </div>
+        </div>
+        <div class="card-expand-hint">
+          <span class="arrow">▶</span>
+          <span>Details</span>
+        </div>
+      </div>
+    `;
+
+    // Build analysis section HTML
+    function buildAnalysisSection(a, label, source, timeIso, isPrimary, rawMetar) {
+      if (!a) return '';
+
+      // ── Computed values ──
+      const timeDisplay  = timeIso
+        ? `${formatUtcForDisplay(timeIso)} · ${formatLocalForDisplay(timeIso, tz)} ${tzAbbr(tz)}`
+        : '';
+      const recClsA      = recClass(a.recommendation);
+      const ceilingPass  = a.ceilingType === 'VV' ? false : (a.ceiling === null ? true : a.ceiling >= a.minCeilingFt);
+      const visClass     = a.visibility !== null && a.visibility < a.minVisibilitySM ? 'fail' : 'pass';
+      const ceilClass    = !ceilingPass ? 'fail' : 'pass';
+      const xwdClass     = a.crosswind !== null && a.crosswind > a.maxCrosswindKts ? 'fail' : 'pass';
+      const gustVal      = a.gustSpeed === null ? 'N/A' : (a.gustSpeed > a.maxGustKts ? 'FAIL' : 'PASS');
+      const wxVal        = a.wxSeverity === 'NOGO' ? 'FAIL' : a.wxSeverity === 'CAUTION' ? 'CAUTION' : 'PASS';
+      const daResult     = a.densityAltitude;
+      const daPass       = !daResult ? 'N/A'
+                         : daResult.densityAlt >= a.noGoDensityAlt    ? 'FAIL'
+                         : daResult.densityAlt >= a.cautionDensityAlt ? 'CAUTION' : 'PASS';
+      const daDisplay    = daResult ? `${daResult.densityAlt.toLocaleString()}ft` : 'N/A';
+      const daClass      = daPass === 'FAIL' ? 'fail' : daPass === 'CAUTION' ? 'warn' : 'pass';
+      const tempDisplay  = (daResult && daResult.tempC !== null)
+                         ? `${daResult.tempC}°C / ${Math.round(daResult.tempC * 9/5 + 32)}°F` : 'N/A';
+      const dewDisplay   = (daResult && daResult.dewpointC !== null) ? `${daResult.dewpointC}°C` : 'N/A';
+      const xwdStatus    = a.crosswind === null ? 'N/A' : (a.crosswind <= a.maxCrosswindKts ? 'PASS' : 'FAIL');
+
+      // ── Personal minimums rows ──
+      const mins = [
+        { k: `VIS ≥${a.minVisibilitySM}SM`,  v: a.visibility !== null ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A' },
+        { k: `CEIL ≥${a.minCeilingFt}ft`,    v: ceilingPass ? 'PASS' : 'FAIL' },
+        { k: `XWD ≤${a.maxCrosswindKts}kts`, v: xwdStatus },
+        { k: `GUST ≤${a.maxGustKts}kts`,     v: gustVal },
+        { k: `DA ≤${a.noGoDensityAlt}ft`,    v: daPass },
+        { k: 'WX SEVERITY',                   v: wxVal },
+        { k: 'FAA VFR',                        v: flightRules === 'IFR' ? 'N/A' : (a.faaVfrGo ? 'LEGAL' : 'ILLEGAL') },
+      ];
+      const minHtml = mins.map(m => {
+        const cls = m.v === 'PASS' || m.v === 'LEGAL'     ? 'min-pass'
+                  : m.v === 'FAIL' || m.v === 'ILLEGAL'   ? 'min-fail'
+                  : m.v === 'CAUTION'                      ? 'min-caution' : 'min-na';
+        return `<div class="min-item"><span class="min-key">${m.k}</span><span class="${cls}">${m.v}</span></div>`;
+      }).join('');
+
+      // ── Concerns & positives ──
+      const concernsHtml  = a.concerns.length > 0
+        ? a.concerns.map(c => `<div class="concern-item">${c}</div>`).join('')
+        : '<div class="concern-item" style="opacity:0.4">None identified.</div>';
+      const positivesHtml = a.positives && a.positives.length > 0
+        ? a.positives.map(p => `<div class="positive-item">${p}</div>`).join('')
+        : '<div class="positive-item" style="opacity:0.4">None identified.</div>';
+
+      // ── Sub-components ──
+      const periodLabelHtml = a.tafPeriodLabel
+        ? `<div class="analysis-period-label">${a.tafPeriodLabel}${a.tempoLabels && a.tempoLabels.length > 0 ? ' + ' + a.tempoLabels.join(', ') : ''}</div>`
+        : '';
+
+      const recBadge = `<div class="card-rec ${recClsA}" style="font-size:9px;letter-spacing:0.5px;display:inline-block;margin-bottom:10px;">${a.recommendation}</div>`;
+
+      // Stale METAR warning — shown when METAR is older than 90 minutes
+      let staleMetarHtml = '';
+      if (!a.isTafAnalysis && rawMetar) {
+        const metarMatch = rawMetar.match(/\b\d{6}Z\b/);
+        if (metarMatch) {
+          const obsDay  = parseInt(metarMatch[0].slice(0, 2));
+          const obsHour = parseInt(metarMatch[0].slice(2, 4));
+          const obsMin  = parseInt(metarMatch[0].slice(4, 6));
+          const now     = new Date();
+          const obsDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), obsDay, obsHour, obsMin));
+          if (obsDate > now) obsDate.setUTCMonth(obsDate.getUTCMonth() - 1);
+          const ageMin  = (now - obsDate) / 60000;
+          if (ageMin > 90) {
+            staleMetarHtml = `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#FCD34D;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:3px;padding:5px 10px;margin-bottom:10px;">⚠️ METAR is ${Math.round(ageMin)} minutes old — conditions may have changed</div>`;
+          }
+        }
+      }
+
+      // ── Template ──
+      return `
+        <div class="analysis-section">
+          <div class="analysis-section-label">
+            ${label}
+            <span class="source-tag">${source}</span>
+            <span class="time-tag">${timeDisplay}</span>
+          </div>
+          ${periodLabelHtml}
+          ${recBadge}
+          ${staleMetarHtml}
+          <div class="concerns-block" style="margin-bottom:12px;">
+            <div class="block-title">Concerns</div>
+            ${concernsHtml}
+          </div>
+          ${rawMetar ? `<div class="metar-raw" style="margin-bottom:10px;">${rawMetar}</div>` : ''}
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-label">Visibility</div>
+              <div class="metric-value ${visClass}">${a.visibility !== null ? a.visibility + 'SM' : 'N/A'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Ceiling</div>
+              <div class="metric-value ${ceilClass}">${a.ceilingLabel || 'CLR'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Crosswind</div>
+              <div class="metric-value ${xwdClass}">${a.crosswind !== null ? (a.crosswindIsVrb ? '≤' + a.crosswind + 'kts (VRB)' : '~' + a.crosswind + 'kts') : 'N/A'}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Temperature</div>
+              <div class="metric-value">${tempDisplay}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Dewpoint</div>
+              <div class="metric-value">${dewDisplay}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Density Alt</div>
+              <div class="metric-value ${daClass}">${daDisplay}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Met Category</div>
+              <div class="metric-value">${a.flightCategory || '—'}</div>
+            </div>
+          </div>
+          <div class="mins-title">Personal Minimums Check</div>
+          <div class="mins-grid">${minHtml}</div>
+          <div class="positives-block">
+            <div class="block-title">Positives</div>
+            ${positivesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // Arrival section or no-TAF notice
+    let arrivalSectionHtml = '';
+    if (leg.flightMin) {
+      if (arrA) {
+        arrivalSectionHtml = buildAnalysisSection(
+          arrA,
+          'Forecast at Arrival',
+          arrA.isTafAnalysis ? 'TAF' : 'METAR',
+          r.arrivalTime,
+          false,
+          null
+        );
+      } else {
+        arrivalSectionHtml = `
+          <div class="analysis-section">
+            <div class="analysis-section-label">Forecast at Arrival <span class="source-tag">TAF</span></div>
+            <div class="no-taf-notice">
+              No TAF available for ${r.station}. Check area forecasts via
+              <a href="https://aviationweather.gov" target="_blank" style="color:var(--gold)">aviationweather.gov</a>
+              or ForeFlight for AIRMETs, SIGMETs, and area forecasts covering this location.
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      arrivalSectionHtml = `
+        <div class="analysis-section">
+          <div class="analysis-section-label">Forecast at Arrival</div>
+          <div class="no-taf-notice">
+            Enter a flight time to see forecast conditions at arrival.
+          </div>
+        </div>
+      `;
+    }
+
+    // Full TAF reference section
+    const rawSectionHtml = r.hasTaf ? `
+      <div class="raw-section">
+        <div class="raw-section-label">Full TAF</div>
+        <button class="taf-toggle" onclick="toggleTaf(this)">
+          <span>TAF Forecast</span><span>▸</span>
+        </button>
+        <div class="taf-content">${r.taf || ''}</div>
+      </div>
+    ` : `
+      <div class="raw-section">
+        <div class="raw-section-label">Full TAF</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--slate);opacity:0.4;padding-top:4px;">No TAF available for this station.</div>
+      </div>
+    `;
+
+    card.innerHTML = `
+      ${summaryHtml}
+      <div class="card-detail">
+        ${buildAnalysisSection(depA, 'Current Conditions', r.departureSource || 'METAR', r.departureTime, true, r.metarRaw)}
+        ${arrivalSectionHtml}
+        ${rawSectionHtml}
+      </div>
+    `;
+
+    return card;
+  }
+
+  function toggleCard(summaryEl) {
+    const detail = summaryEl.nextElementSibling;
+    const isOpen = detail.classList.contains('open');
+    detail.classList.toggle('open');
+    summaryEl.classList.toggle('open', !isOpen);
+  }
+
+  function toggleTaf(btn) {
+    const content = btn.nextElementSibling;
+    const isOpen  = content.classList.toggle('open');
+    btn.querySelector('span:last-child').textContent = isOpen ? '▾' : '▸';
+  }
+
+  // ── SAVE ──
+  function saveReport() {
+    if (!window._lastData) return;
+    const tz          = window._lastTz          || 'America/New_York';
+    const flightRules = window._lastFlightRules  || 'VFR';
+    const lines = [];
+    const now   = new Date().toLocaleString('en-US', { timeZone: tz });
+    const route = window._lastLegs.map(l => `${l.departure}→${l.arrival}`).join(' · ');
+
+    lines.push('CENTRAL AVIATION — PREFLIGHT REPORT');
+    lines.push('═'.repeat(50));
+
+    // ── Flight Info ──
+    const picName    = document.getElementById('picName')?.value?.trim()    || '—';
+    const studentName= document.getElementById('studentName')?.value?.trim()|| '—';
+    const picCert    = document.getElementById('picCert')?.value?.trim()    || '—';
+    const flightDate = document.getElementById('flightDate')?.value         || '—';
+    lines.push(`PIC / CFI:    ${picName}  (Cert: ${picCert})`);
+    lines.push(`Student:      ${studentName}`);
+    lines.push(`Flight Date:  ${flightDate}`);
+    lines.push(`Route:        ${route}`);
+    lines.push(`Flight Rules: ${flightRules}`);
+    lines.push(`Generated:    ${now} ${tzAbbr(tz)}`);
+    lines.push('');
+
+    // ── Currency ──
+    const dayVal    = document.getElementById('dayLandings')?.value;
+    const nightVal  = document.getElementById('nightLandings')?.value;
+    const ifrVal    = document.getElementById('ifrApproaches')?.value;
+    const reviewVal = document.getElementById('flightReviewDate')?.value;
+    lines.push('PILOT CURRENCY');
+    lines.push('-'.repeat(50));
+    lines.push(`  Day Landings (90 days):     ${dayVal   || '—'}  → ${document.getElementById('dayBadge')?.textContent         || '—'}`);
+    lines.push(`  Night Landings (90 days):   ${nightVal || '—'}  → ${document.getElementById('nightBadge')?.textContent       || '—'}`);
+    lines.push(`  IFR Approaches (6 months):  ${ifrVal   || '—'}  → ${document.getElementById('ifrBadge')?.textContent         || '—'}`);
+    lines.push(`  Flight Review Date:         ${reviewVal|| '—'}  → ${document.getElementById('flightReviewBadge')?.textContent || '—'}`);
+    if (flightRules === 'SOLO') {
+      const endorsed = document.getElementById('chk-solo-endorsement')?.checked;
+      const endNotes = document.getElementById('soloEndorsementNotes')?.value?.trim();
+      lines.push(`  Solo Endorsement:           ${endorsed ? '✓ CONFIRMED' : '✗ NOT CONFIRMED'}`);
+      if (endNotes) lines.push(`    Notes: ${endNotes}`);
+    }
+    lines.push('');
+
+    // ── IMSAFE ──
+    const imsafeItems = getChecklistData('imsafePanelBody');
+    if (imsafeItems.length > 0) {
+      lines.push('IMSAFE — PILOT SELF-ASSESSMENT');
+      lines.push('-'.repeat(50));
+      imsafeItems.forEach(item => {
+        lines.push(`  [${item.checked ? '✓' : ' '}] ${item.label}`);
+        if (item.notes) lines.push(`       Notes: ${item.notes}`);
+      });
+      const imsafeComplete = imsafeItems.every(i => i.checked);
+      lines.push(`  Status: ${imsafeComplete ? 'COMPLETE' : 'INCOMPLETE'}`);
+      lines.push('');
+    }
+
+    // ── AROW ──
+    const arowItems = getChecklistData('arowPanelBody');
+    if (arowItems.length > 0) {
+      lines.push('AROW — AIRCRAFT DOCUMENTS');
+      lines.push('-'.repeat(50));
+      arowItems.forEach(item => {
+        lines.push(`  [${item.checked ? '✓' : ' '}] ${item.label}`);
+        if (item.notes) lines.push(`       Notes: ${item.notes}`);
+      });
+      const arowComplete = arowItems.every(i => i.checked);
+      lines.push(`  Status: ${arowComplete ? 'COMPLETE' : 'INCOMPLETE'}`);
+      lines.push('');
+    }
+
+    const allRecs = window._lastData.legs.flatMap(l => l.reports.map(r => r.recommendation));
+    lines.push(`TRIP RECOMMENDATION: ${deriveTripRec(allRecs)}`);
+    lines.push('');
+
+    // Helper: format an analysis section (current conditions or forecast at arrival)
+    function formatAnalysisSection(a, sectionTitle, source, timeIso, rawMetar) {
+      const daResult  = a.densityAltitude;
+      const humNote   = daResult ? (daResult.humidityUsed ? ' (humidity corrected)' : ' (dry air — no dewpoint)') : '';
+      const daDisplay = daResult ? `${daResult.densityAlt.toLocaleString()}ft${humNote}` : 'N/A';
+      const tempDisp  = (daResult && daResult.tempC !== null)
+                      ? `${daResult.tempC}°C / ${Math.round(daResult.tempC * 9/5 + 32)}°F` : 'N/A';
+      const dewDisp   = (daResult && daResult.dewpointC !== null) ? `${daResult.dewpointC}°C` : 'N/A';
+      const xwdDisp   = a.crosswind !== null
+                      ? (a.crosswindIsVrb ? `≤${a.crosswind}kts (VRB)` : `~${a.crosswind}kts`) : 'N/A';
+
+      const timeDisp  = timeIso
+        ? `${formatUtcForDisplay(timeIso)} · ${formatLocalForDisplay(timeIso, tz)} ${tzAbbr(tz)}`
+        : '';
+
+      // Stale METAR check
+      let staleNote = '';
+      if (!a.isTafAnalysis && rawMetar) {
+        const metarMatch = rawMetar.match(/\b\d{6}Z\b/);
+        if (metarMatch) {
+          const obsDay  = parseInt(metarMatch[0].slice(0, 2));
+          const obsHour = parseInt(metarMatch[0].slice(2, 4));
+          const obsMin  = parseInt(metarMatch[0].slice(4, 6));
+          const nowD    = new Date();
+          const obsDate = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), obsDay, obsHour, obsMin));
+          if (obsDate > nowD) obsDate.setUTCMonth(obsDate.getUTCMonth() - 1);
+          const ageMin = (nowD - obsDate) / 60000;
+          if (ageMin > 90) staleNote = ` ⚠ ${Math.round(ageMin)} minutes old`;
+        }
+      }
+
+      // Personal minimums check
+      const ceilingPass = a.ceilingType === 'VV' ? false : (a.ceiling === null ? true : a.ceiling >= a.minCeilingFt);
+      const gustVal     = a.gustSpeed === null ? 'N/A' : (a.gustSpeed > a.maxGustKts ? 'FAIL' : 'PASS');
+      const wxVal       = a.wxSeverity === 'NOGO' ? 'FAIL' : a.wxSeverity === 'CAUTION' ? 'CAUTION' : 'PASS';
+      const daPass      = !daResult ? 'N/A'
+                        : daResult.densityAlt >= a.noGoDensityAlt    ? 'FAIL'
+                        : daResult.densityAlt >= a.cautionDensityAlt ? 'CAUTION' : 'PASS';
+      const xwdPass     = a.crosswind === null ? 'N/A' : (a.crosswind <= a.maxCrosswindKts ? 'PASS' : 'FAIL');
+      const faaVfr      = flightRules === 'IFR' ? 'N/A' : (a.faaVfrGo ? 'LEGAL' : 'ILLEGAL');
+      const visPass     = a.visibility !== null ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A';
+
+      const section = [];
+      section.push(`${sectionTitle} [${source}${timeDisp ? ' · ' + timeDisp : ''}]${staleNote}`);
+      section.push('-'.repeat(50));
+      if (a.tafPeriodLabel) {
+        const tempoStr = a.tempoLabels && a.tempoLabels.length > 0 ? ' + ' + a.tempoLabels.join(', ') : '';
+        section.push(`Period:           ${a.tafPeriodLabel}${tempoStr}`);
+      }
+      section.push(`Recommendation:   ${a.recommendation}`);
+      if (rawMetar) section.push(`Raw METAR:        ${rawMetar}`);
+      section.push('');
+      section.push('Conditions:');
+      section.push(`  Met Category:   ${a.flightCategory || '—'}`);
+      section.push(`  Visibility:     ${a.visibility !== null ? a.visibility + 'SM' : 'Unavailable'}`);
+      section.push(`  Ceiling:        ${a.ceilingLabel || 'CLR'}`);
+      section.push(`  Crosswind:      ${xwdDisp}`);
+      section.push(`  Temperature:    ${tempDisp}`);
+      section.push(`  Dewpoint:       ${dewDisp}`);
+      section.push(`  Density Alt:    ${daDisplay}`);
+      section.push('');
+      section.push('Personal Minimums:');
+      section.push(`  VIS  ≥${a.minVisibilitySM}SM`.padEnd(24) + visPass);
+      section.push(`  CEIL ≥${a.minCeilingFt}ft`.padEnd(24)    + (ceilingPass ? 'PASS' : 'FAIL'));
+      section.push(`  XWD  ≤${a.maxCrosswindKts}kts`.padEnd(24) + xwdPass);
+      section.push(`  GUST ≤${a.maxGustKts}kts`.padEnd(24)     + gustVal);
+      section.push(`  DA   ≤${a.noGoDensityAlt}ft`.padEnd(24)  + daPass);
+      section.push('  WX SEVERITY'.padEnd(24)                   + wxVal);
+      section.push('  FAA VFR'.padEnd(24)                       + faaVfr);
+      section.push('');
+      section.push('Concerns:');
+      if (a.concerns.length > 0) {
+        a.concerns.forEach(c => section.push(`  - ${c}`));
+      } else {
+        section.push('  None identified.');
+      }
+      section.push('');
+      section.push('Positives:');
+      if (a.positives && a.positives.length > 0) {
+        a.positives.forEach(p => section.push(`  + ${p}`));
+      } else {
+        section.push('  None identified.');
+      }
+      return section;
+    }
+
+    window._lastData.legs.forEach((leg, i) => {
+      const l = window._lastLegs[i];
+      lines.push('═'.repeat(50));
+      lines.push(`LEG ${i+1}: ${l.departure} → ${l.arrival}`);
+      if (l.flightMin) {
+        lines.push(`DEP: ${formatLocalForDisplay(leg.departureTime, tz)} ${tzAbbr(tz)}  ` +
+                   `ARR: ${formatLocalForDisplay(leg.arrivalTime, tz)} ${tzAbbr(tz)}  (${l.flightMin} min)`);
+      }
+      lines.push(`Leg Recommendation: ${deriveTripRec(leg.reports.map(r => r.recommendation))}`);
+      lines.push('═'.repeat(50));
+
+      leg.reports.forEach((r, j) => {
+        const role = j === 0 ? 'Departure' : j === 1 ? 'Arrival' : `Stop ${j + 1}`;
+        lines.push('');
+        lines.push(`── ${role.toUpperCase()}: ${r.station}${r.stationName ? ' — ' + r.stationName : ''} ──`);
+        lines.push(`Overall: ${r.recommendation}`);
+
+        // Current conditions / no-go source note
+        const arrivalRec = r.arrivalAnalysis ? r.arrivalAnalysis.recommendation : null;
+        if (r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')) {
+          lines.push('  ⚠ No-go is from current conditions only — forecast at arrival is passing.');
+        }
+        lines.push('');
+
+        // Current conditions section
+        lines.push(...formatAnalysisSection(
+          r.departureAnalysis,
+          'CURRENT CONDITIONS',
+          r.departureSource || 'METAR',
+          r.departureTime,
+          r.metarRaw || null
+        ));
+
+        // Arrival forecast section
+        lines.push('');
+        if (l.flightMin) {
+          if (r.arrivalAnalysis) {
+            lines.push(...formatAnalysisSection(
+              r.arrivalAnalysis,
+              'FORECAST AT ARRIVAL',
+              r.arrivalAnalysis.isTafAnalysis ? 'TAF' : 'METAR',
+              r.arrivalTime,
+              null
+            ));
+          } else {
+            lines.push('FORECAST AT ARRIVAL');
+            lines.push('-'.repeat(50));
+            lines.push('No TAF available for this station.');
+            lines.push('Check area forecasts via aviationweather.gov or ForeFlight');
+            lines.push('for AIRMETs, SIGMETs, and area forecasts covering this location.');
+          }
+        } else {
+          lines.push('FORECAST AT ARRIVAL');
+          lines.push('-'.repeat(50));
+          lines.push('No flight time entered — forecast at arrival not available.');
+        }
+
+        // Full TAF
+        if (r.taf) {
+          lines.push('');
+          lines.push('FULL TAF');
+          lines.push('-'.repeat(50));
+          lines.push(r.taf);
+        }
+        lines.push('');
+      });
+    });
+
+    lines.push('═'.repeat(50));
+    lines.push('This report does not replace an official weather briefing.');
+    lines.push('Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.');
+    lines.push('Central Aviation · Internal Use Only');
+
+    const routeSlug = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `CA-Preflight-${routeSlug}-${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
