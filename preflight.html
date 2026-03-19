@@ -1320,10 +1320,11 @@
 
       /* ── CFI signature block ── */
       #pdf-signature {
-        display: block !important;
+        display: block;
         padding-top: 24px;
         page-break-inside: avoid; break-inside: avoid;
       }
+      #pdf-signature.sig-hidden { display: none !important; }
       #pdf-signature .sig-title {
         font-family: 'IBM Plex Mono', monospace;
         font-size: 8pt; letter-spacing: 1.5px;
@@ -3492,8 +3493,18 @@
     const includeCfi = document.getElementById('cfiSignoffToggle')?.checked !== false;
     const sig = document.getElementById('pdf-signature');
 
-    // Show or hide CFI signature block based on toggle
-    if (sig) sig.style.display = includeCfi ? 'block' : 'none';
+    // Toggle class rather than inline style — inline style loses to @media print !important
+    if (sig) sig.classList.toggle('sig-hidden', !includeCfi);
+
+    // Set document title so Chrome uses it as the default PDF filename.
+    // Pattern: CA-Preflight-KIAD-KATL_KATL-KLEX-2026-03-19
+    // Uses flight date (not today) since briefs are often prepared the day before.
+    const originalTitle = document.title;
+    if (window._lastLegs && window._lastLegs.length > 0) {
+      const routeSlug  = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
+      const flightDate = document.getElementById('flightDate')?.value || new Date().toISOString().slice(0, 10);
+      document.title = `CA-Preflight-${routeSlug}-${flightDate}`;
+    }
 
     // Inject hard page-break divs before each leg section (except the first)
     // and optionally before the CFI signature block.
@@ -3520,8 +3531,9 @@
 
     window.print();
 
-    // Clean up: restore signature visibility and remove injected breaks
-    if (sig) sig.style.display = 'none';
+    // Clean up: restore document title, signature visibility, and injected breaks
+    document.title = originalTitle;
+    if (sig) sig.classList.remove('sig-hidden');
     insertedBreaks.forEach(el => el.parentNode && el.parentNode.removeChild(el));
   }
 
