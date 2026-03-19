@@ -980,6 +980,7 @@
     .min-na      { color: var(--slate); opacity: 0.5; }
 
     .concerns-block, .positives-block { margin-bottom: 8px; }
+    .notes-block { margin-bottom: 8px; }
     .block-title {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px; letter-spacing: 1.5px;
@@ -992,6 +993,13 @@
       color: var(--slate-light);
     }
     .concern-item:last-child, .positive-item:last-child { border-bottom: none; }
+    .note-item {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 11px; line-height: 1.5; padding: 3px 0;
+      border-bottom: 1px solid rgba(148,163,184,0.06);
+      color: var(--slate); opacity: 0.75;
+    }
+    .note-item:last-child { border-bottom: none; }
 
     /* No TAF notice */
     .no-taf-notice {
@@ -1187,6 +1195,7 @@
       .min-caution{ color: #B45309 !important; }
       .min-na     { color: #666 !important; opacity: 1; }
       .concern-item, .positive-item { color: #222 !important; border-bottom-color: #ddd; }
+      .note-item { color: #555 !important; opacity: 1; border-bottom-color: #ddd; }
       .taf-content { display: none !important; }
       .taf-toggle  { display: none; }
       .raw-section { display: none !important; }      .card-expand-hint { display: none; }
@@ -2836,10 +2845,13 @@
         return `<div class="min-item"><span class="min-key">${m.k}</span><span class="${cls}">${m.v}</span></div>`;
       }).join('');
 
-      // ── Concerns & positives ──
+      // ── Concerns, notes & positives ──
       const concernsHtml  = a.concerns.length > 0
         ? a.concerns.map(c => `<div class="concern-item">${c}</div>`).join('')
         : '<div class="concern-item" style="opacity:0.4">None identified.</div>';
+      const notesHtml = a.notes && a.notes.length > 0
+        ? a.notes.map(n => `<div class="note-item">${n}</div>`).join('')
+        : '';
       const positivesHtml = a.positives && a.positives.length > 0
         ? a.positives.map(p => `<div class="positive-item">${p}</div>`).join('')
         : '<div class="positive-item" style="opacity:0.4">None identified.</div>';
@@ -2893,6 +2905,7 @@
             ${concernsHtml}
           </div>
           ${rawMetar ? `<div class="metar-raw" style="margin-bottom:10px;">${rawMetar}</div>` : ''}
+          ${notesHtml ? `<div class="notes-block" style="margin-bottom:10px;"><div class="block-title" style="opacity:0.6;">Notes</div>${notesHtml}</div>` : ''}
           <div class="metrics">
             <div class="metric">
               <div class="metric-label">Visibility</div>
@@ -3191,6 +3204,11 @@
         a.concerns.forEach(c => section.push(`  - ${c}`));
       } else {
         section.push('  None identified.');
+      }
+      if (a.notes && a.notes.length > 0) {
+        section.push('');
+        section.push('Notes:');
+        a.notes.forEach(n => section.push(`  i ${n}`));
       }
       section.push('');
       section.push('Positives:');
