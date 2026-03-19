@@ -1139,7 +1139,7 @@
       .verdict-rec, .verdict-icon, .verdict-route { color: #111 !important; }
 
       .reports-grid { grid-template-columns: 1fr; gap: 12px; }
-      .station-card { border: 1px solid #ccc; break-inside: avoid; background: white; }
+      .station-card { border: 1px solid #ccc; background: white; }
       .card-summary { background: #f0f0f0 !important; }
       .card-detail  { display: block !important; }
       .card-station { color: #111 !important; }
@@ -1161,8 +1161,9 @@
       .min-caution{ color: #B45309 !important; }
       .min-na     { color: #666 !important; opacity: 1; }
       .concern-item, .positive-item { color: #222 !important; border-bottom-color: #ddd; }
-      .taf-content { display: block !important; background: #f5f5f5; border: 1px solid #ddd; color: #333 !important; }
+      .taf-content { display: none !important; }
       .taf-toggle  { display: none; }
+      .raw-section { display: none !important; }
       .card-expand-hint { display: none; }
       .logo-img { height: 40px; width: auto; filter: none; mix-blend-mode: normal; }
       .logo-text .tool { color: #444 !important; }
@@ -1260,11 +1261,12 @@
       .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
 
       /* ── Page break control ── */
-      /* Protect atomic units — don't try to keep entire cards unbroken,
-         they're often too tall. Instead protect the smaller pieces. */
-      .station-card       { break-inside: avoid; }
+      /* Don't try to keep entire station cards unbroken — they're too tall.
+         Protect only atomic units that are short enough for the browser to honour. */
+      .station-card       { break-inside: auto; }
       .route-section      { break-inside: avoid; }
       .analysis-section   { break-before: auto; }
+      .analysis-section-label { break-after: avoid; }
       .checklist-item     { break-inside: avoid; }
       .currency-item      { break-inside: avoid; }
       .min-item           { break-inside: avoid; }
@@ -1273,6 +1275,7 @@
       .positives-block    { break-inside: avoid; }
       .wind-level         { break-inside: avoid; }
       .route-advisory     { break-inside: avoid; }
+      .mins-grid          { break-inside: avoid; }
       .leg-section + .leg-section { page-break-before: always; break-before: always; }
 
       /* Flight rules toggle — hide radio inputs, show selected value as text */
@@ -1290,10 +1293,14 @@
       }
 
       /* ── CFI signature block — force onto its own page ── */
+      /* Use both page-break-before on the signature AND page-break-after
+         on legReports to ensure Chrome honours the break */
+      #legReports { page-break-after: always; break-after: always; }
       #pdf-signature {
         display: block !important;
         page-break-before: always;
-        break-before: always;
+        break-before: page;
+        clear: both;
         padding-top: 24px;
         border-top: none;
         page-break-inside: avoid; break-inside: avoid;
@@ -2898,10 +2905,15 @@
     // Arrival section or no-TAF notice
     let arrivalSectionHtml = '';
     if (leg.flightMin) {
+      // Label clarifies context: for departure station, this is the same airport at arrival time
+      // For arrival station, this is a forecast check of destination at the time we arrive
+      const arrivalForecastLabel = role === 'Departure'
+        ? 'Forecast at Arrival Time (Departure Airport)'
+        : 'Forecast at Arrival';
       if (arrA) {
         arrivalSectionHtml = buildAnalysisSection(
           arrA,
-          'Forecast at Arrival',
+          arrivalForecastLabel,
           arrA.isTafAnalysis ? 'TAF' : 'METAR',
           r.arrivalTime,
           false,
@@ -2910,7 +2922,7 @@
       } else {
         arrivalSectionHtml = `
           <div class="analysis-section">
-            <div class="analysis-section-label">Forecast at Arrival <span class="source-tag">TAF</span></div>
+            <div class="analysis-section-label">${arrivalForecastLabel} <span class="source-tag">TAF</span></div>
             <div class="no-taf-notice">
               No TAF available for ${r.station}. Check area forecasts via
               <a href="https://aviationweather.gov" target="_blank" style="color:var(--gold)">aviationweather.gov</a>
@@ -3307,25 +3319,28 @@
         ));
 
         // Arrival forecast section
+        const arrForecastLabel = role === 'Departure'
+          ? 'FORECAST AT ARRIVAL TIME (DEPARTURE AIRPORT)'
+          : 'FORECAST AT ARRIVAL';
         lines.push('');
         if (l.flightMin) {
           if (r.arrivalAnalysis) {
             lines.push(...formatAnalysisSection(
               r.arrivalAnalysis,
-              'FORECAST AT ARRIVAL',
+              arrForecastLabel,
               r.arrivalAnalysis.isTafAnalysis ? 'TAF' : 'METAR',
               r.arrivalTime,
               null
             ));
           } else {
-            lines.push('FORECAST AT ARRIVAL');
+            lines.push(arrForecastLabel);
             lines.push('-'.repeat(50));
             lines.push('No TAF available for this station.');
             lines.push('Check area forecasts via aviationweather.gov or ForeFlight');
             lines.push('for AIRMETs, SIGMETs, and area forecasts covering this location.');
           }
         } else {
-          lines.push('FORECAST AT ARRIVAL');
+          lines.push(arrForecastLabel);
           lines.push('-'.repeat(50));
           lines.push('No flight time entered — forecast at arrival not available.');
         }
