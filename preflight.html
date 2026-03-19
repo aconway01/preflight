@@ -2532,7 +2532,7 @@
         const altStr    = p.altitude ? ` · ${p.altitude.toLocaleString()}ft` : '';
         const icgStr    = p.icing      ? ` · ICE: ${p.icing}`      : '';
         const turbStr   = p.turbulence ? ` · TURB: ${p.turbulence}` : '';
-        const hasHazard = (p.icing && p.icing !== 'NEG') || (p.turbulence && p.turbulence !== 'NEG');
+        const hasHazard = !!(p.icing || p.turbulence);
         // Altitude relevance — dim PIREPs more than 3000ft from cruise alt
         const atAlt     = ri.cruiseAlt && p.altitude !== null
           ? Math.abs(p.altitude - ri.cruiseAlt) <= 3000 : true;
