@@ -458,6 +458,17 @@
       border-top: 1px solid rgba(200,164,77,0.08);
     }
 
+    .leg-row-hints {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 120px auto;
+      gap: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate);
+      opacity: 0.5; line-height: 1.4;
+      margin-top: -4px;
+    }
+
     .leg-number {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 10px; letter-spacing: 1px;
@@ -998,6 +1009,9 @@
       .leg-row-bottom .leg-field:first-child { grid-column: 1 / -1; }
       .leg-row-bottom .leg-field { min-width: 0; overflow: hidden; }
       .leg-field input[type="datetime-local"] { min-width: 0; width: 100%; }
+      .leg-row-hints { grid-template-columns: 1fr 1fr; }
+      .leg-row-hints > div:first-child { grid-column: 1 / -1; display: none; }
+      .leg-row-hints > div:last-child { display: none; }
       .flight-info-grid { grid-template-columns: 1fr; }
       .flight-rules-toggle { width: 100%; }
       .mins-inputs { grid-template-columns: 1fr 1fr; }
@@ -1824,7 +1838,18 @@
     recalculateDepTimes();
   }
 
-  // Recalculates departure times for all legs after the first.
+  // Snaps cruise altitude to the nearest 500ft increment on blur.
+  // Clamps to 500–17500ft. Shows red border if value is non-numeric.
+  function normaliseCruiseAlt(input) {
+    const val = input.value.trim();
+    if (!val) { input.style.borderColor = ''; return; }
+    const n = parseInt(val);
+    if (isNaN(n)) { input.style.borderColor = 'var(--red)'; return; }
+    const snapped = Math.round(n / 500) * 500;
+    const clamped = Math.min(17500, Math.max(500, snapped));
+    input.value = clamped;
+    input.style.borderColor = '';
+  }
   function recalculateDepTimes() {
     const tz   = document.getElementById('tzSelect').value;
     const rows = document.querySelectorAll('.leg-row');
@@ -1896,10 +1921,14 @@
         <div class="leg-field">
           <label>Cruise Alt (ft)</label>
           <input type="number" class="cruise-alt-input" placeholder="4500"
-                 min="500" max="17500" step="500" autocomplete="off">
+                 min="500" max="17500" step="500" autocomplete="off"
+                 onblur="normaliseCruiseAlt(this)">
         </div>
-        <div style="padding-bottom:10px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--slate); opacity:0.5; align-self:flex-end;">
-          arrival time<br>auto-calculated
+        <div class="leg-row-hints">
+          <div></div>
+          <div>arrival time auto-calculated</div>
+          <div>500–17,500ft · snaps to nearest 500ft</div>
+          <div></div>
         </div>
       </div>
     `;
@@ -1983,6 +2012,8 @@
     // Clear all previous leg departure errors
     document.querySelectorAll('.leg-dep-error').forEach(el => el.remove());
     document.querySelectorAll('.dep-time-input').forEach(el => el.style.borderColor = '');
+    document.querySelectorAll('.flight-time-input').forEach(el => el.style.borderColor = '');
+    document.querySelectorAll('.cruise-alt-input').forEach(el => el.style.borderColor = '');
 
     for (const row of document.querySelectorAll('.leg-row')) {
       const depInput = row.querySelector('.leg-row-top input[type="text"]:first-of-type');
@@ -1999,7 +2030,7 @@
       const flightTimeVal  = row.querySelector('.flight-time-input').value;
       const cruiseAltVal   = row.querySelector('.cruise-alt-input').value;
       const totalMin       = parseFlightTime(flightTimeVal);
-      const cruiseAltFt    = cruiseAltVal ? parseInt(cruiseAltVal) : null;
+      const cruiseAltFt    = cruiseAltVal !== '' ? parseInt(cruiseAltVal) : null;
       const depTimeUtc     = localToUtcIso(depTimeLocal, tz);
 
       // Block if flight time is present but invalid
@@ -2007,6 +2038,14 @@
         const ftInput = row.querySelector('.flight-time-input');
         ftInput.style.borderColor = 'var(--red)';
         showError(`Leg ${row.dataset.leg}: Invalid flight time — use H:MM (e.g. 1:30) or minutes (e.g. 90).`);
+        return;
+      }
+
+      // Block if cruise altitude is present but out of range (500–17500ft)
+      if (cruiseAltVal !== '' && (isNaN(cruiseAltFt) || cruiseAltFt < 500 || cruiseAltFt > 17500)) {
+        const caInput = row.querySelector('.cruise-alt-input');
+        caInput.style.borderColor = 'var(--red)';
+        showError(`Leg ${row.dataset.leg}: Cruise altitude must be between 500 and 17,500ft.`);
         return;
       }
 
@@ -2124,7 +2163,7 @@
       const grid = document.getElementById(`legGrid${i}`);
       leg.reports.forEach((r, j) => {
         const role = j === 0 ? 'Departure' : j === 1 ? 'Arrival' : `Stop ${j + 1}`;
-        grid.appendChild(buildCard(r, role, leg, tz, flightRules));
+        grid.appendChild(buildCard(r, role, leg, tz, flightRules, i));
       });
     });
 
@@ -2333,7 +2372,7 @@
     return el;
   }
 
-  function buildCard(r, role, leg, tz, flightRules) {
+  function buildCard(r, role, leg, tz, flightRules, legIdx) {
     const card = document.createElement('div');
     card.className = 'station-card';
 
@@ -2352,7 +2391,7 @@
 
     // Summary section (always visible)
     const summaryHtml = `
-      <div class="card-summary" id="summary-${r.station}-${role.replace(' ','')}" onclick="toggleCard(this)">
+      <div class="card-summary" id="summary-${legIdx}-${r.station}-${role.replace(' ','')}" onclick="toggleCard(this)">
         <div class="card-summary-top">
           <div class="card-station-block">
             <div class="card-role">${role}</div>
@@ -2640,7 +2679,7 @@
     }
 
     // ── AROW ──
-    const arowItems = getChecklistData('arowPanelBody');
+    const arowItems = getChecklistData('arrowPanelBody');
     if (arowItems.length > 0) {
       lines.push('AROW — AIRCRAFT DOCUMENTS');
       lines.push('-'.repeat(50));
