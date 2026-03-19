@@ -1258,19 +1258,42 @@
       .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
 
       /* ── Page break control ── */
-      .station-card       { page-break-inside: avoid; break-inside: avoid; }
-      .route-panel        { page-break-inside: avoid; break-inside: avoid; }
-      .route-section      { page-break-inside: avoid; break-inside: avoid; }
-      .analysis-section   { page-break-inside: avoid; break-inside: avoid; }
-      .leg-section        { page-break-before: auto; }
+      /* Protect atomic units — don't try to keep entire cards unbroken,
+         they're often too tall. Instead protect the smaller pieces. */
+      .station-card       { break-inside: avoid; }
+      .route-section      { break-inside: avoid; }
+      .analysis-section   { break-before: auto; }
+      .checklist-item     { break-inside: avoid; }
+      .currency-item      { break-inside: avoid; }
+      .min-item           { break-inside: avoid; }
+      .metrics            { break-inside: avoid; }
+      .concerns-block     { break-inside: avoid; }
+      .positives-block    { break-inside: avoid; }
+      .wind-level         { break-inside: avoid; }
+      .route-advisory     { break-inside: avoid; }
       .leg-section + .leg-section { page-break-before: always; break-before: always; }
 
-      /* ── CFI signature block — always last on final page ── */
+      /* Flight rules toggle — hide radio inputs, show selected value as text */
+      .flight-rules-toggle input[type="radio"] { display: none !important; }
+      .flight-rules-toggle label { display: none !important; }
+      .flight-rules-toggle input[type="radio"]:checked + label {
+        display: inline-block !important;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 10pt; font-weight: 600;
+        color: #111 !important;
+        background: #eee;
+        border: 1px solid #999;
+        padding: 2px 10px;
+        border-radius: 3px;
+      }
+
+      /* ── CFI signature block — force onto its own page ── */
       #pdf-signature {
         display: block !important;
-        margin-top: 32px;
-        padding-top: 20px;
-        border-top: 2px solid #111;
+        page-break-before: always;
+        break-before: always;
+        padding-top: 24px;
+        border-top: none;
         page-break-inside: avoid; break-inside: avoid;
       }
       #pdf-signature .sig-title {
@@ -2292,8 +2315,8 @@
         return;
       }
 
-      // Block if departure time is more than 5 minutes in the past
-      if (new Date(depTimeUtc) < new Date(Date.now() - 5 * 60000)) {
+      // Block if departure time is more than 30 minutes in the past
+      if (new Date(depTimeUtc) < new Date(Date.now() - 30 * 60000)) {
         const depInput = row.querySelector('.dep-time-input');
         depInput.style.borderColor = 'var(--red)';
         const legErr = document.createElement('div');
