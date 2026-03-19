@@ -1143,7 +1143,16 @@
       .card-summary { background: #f0f0f0 !important; }
       .card-detail  { display: block !important; }
       .card-station { color: #111 !important; }
-      .card-role, .card-station-name { color: #444 !important; }
+      /* Reset opacity on all card/panel content — base CSS uses opacity for dark-mode
+         aesthetics but this causes blurred/faded text in print */
+      .station-card *, .route-panel *, .panel * {
+        opacity: 1 !important;
+      }
+      /* Re-apply intentional fading only for elements that should stay muted */
+      .card-role    { color: #555 !important; }
+      .card-station-name { color: #666 !important; }
+      .min-na       { color: #888 !important; }
+      .pirep-raw    { color: #555 !important; }
       .flight-cat   { border: 1px solid #999; color: #111 !important; background: #eee !important; }
       .analysis-section { border-bottom: 1px solid #ddd; }
       .analysis-section-label { color: #333 !important; opacity: 1; }
@@ -1261,8 +1270,8 @@
       .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
 
       /* ── Page break control ── */
-      /* Don't try to keep entire station cards unbroken — they're too tall.
-         Protect only atomic units that are short enough for the browser to honour. */
+      /* JS in printReport() injects explicit break divs for leg sections and CFI signature.
+         CSS rules here only protect small atomic units within a page. */
       .station-card       { break-inside: auto; }
       .route-section      { break-inside: avoid; }
       .analysis-section   { break-before: auto; }
@@ -1276,7 +1285,6 @@
       .wind-level         { break-inside: avoid; }
       .route-advisory     { break-inside: avoid; }
       .mins-grid          { break-inside: avoid; }
-      .leg-section + .leg-section { page-break-before: always; break-before: always; }
 
       /* Flight rules toggle — hide radio inputs, show selected value as text */
       .flight-rules-toggle input[type="radio"] { display: none !important; }
@@ -1292,17 +1300,10 @@
         border-radius: 3px;
       }
 
-      /* ── CFI signature block — force onto its own page ── */
-      /* Use both page-break-before on the signature AND page-break-after
-         on legReports to ensure Chrome honours the break */
-      #legReports { page-break-after: always; break-after: always; }
+      /* ── CFI signature block ── */
       #pdf-signature {
         display: block !important;
-        page-break-before: always;
-        break-before: page;
-        clear: both;
         padding-top: 24px;
-        border-top: none;
         page-break-inside: avoid; break-inside: avoid;
       }
       #pdf-signature .sig-title {
@@ -2911,14 +2912,28 @@
         ? 'Forecast at Arrival Time (Departure Airport)'
         : 'Forecast at Arrival';
       if (arrA) {
-        arrivalSectionHtml = buildAnalysisSection(
-          arrA,
-          arrivalForecastLabel,
-          arrA.isTafAnalysis ? 'TAF' : 'METAR',
-          r.arrivalTime,
-          false,
-          null
-        );
+        // Suppress duplicate section if arrival and departure analyses cover the same TAF period
+        const sameAsDep = depA && arrA &&
+          depA.isTafAnalysis && arrA.isTafAnalysis &&
+          depA.tafPeriodLabel === arrA.tafPeriodLabel &&
+          depA.recommendation === arrA.recommendation;
+        if (sameAsDep) {
+          arrivalSectionHtml = `
+            <div class="analysis-section">
+              <div class="analysis-section-label">${arrivalForecastLabel} <span class="source-tag">TAF</span></div>
+              <div class="no-taf-notice" style="color:var(--slate);">Same TAF period covers both departure and arrival — see above.</div>
+            </div>
+          `;
+        } else {
+          arrivalSectionHtml = buildAnalysisSection(
+            arrA,
+            arrivalForecastLabel,
+            arrA.isTafAnalysis ? 'TAF' : 'METAR',
+            r.arrivalTime,
+            false,
+            null
+          );
+        }
       } else {
         arrivalSectionHtml = `
           <div class="analysis-section">
@@ -2961,7 +2976,7 @@
     card.innerHTML = `
       ${summaryHtml}
       <div class="card-detail">
-        ${buildAnalysisSection(depA, 'Current Conditions', r.departureSource || 'METAR', r.departureTime, true, r.metarRaw)}
+        ${buildAnalysisSection(depA, r.departureSource === 'TAF' ? 'Conditions at Departure (TAF Forecast)' : 'Current Conditions', r.departureSource || 'METAR', r.departureTime, true, r.metarRaw)}
         ${arrivalSectionHtml}
         ${rawSectionHtml}
       </div>
@@ -3309,11 +3324,13 @@
         }
         lines.push('');
 
-        // Current conditions section
+        // Current conditions section — label changes when source is TAF (stale METAR)
+        const depSource = r.departureSource || 'METAR';
+        const depLabel  = depSource === 'TAF' ? 'CONDITIONS AT DEPARTURE (TAF FORECAST)' : 'CURRENT CONDITIONS';
         lines.push(...formatAnalysisSection(
           r.departureAnalysis,
-          'CURRENT CONDITIONS',
-          r.departureSource || 'METAR',
+          depLabel,
+          depSource,
           r.departureTime,
           r.metarRaw || null
         ));
@@ -3325,13 +3342,24 @@
         lines.push('');
         if (l.flightMin) {
           if (r.arrivalAnalysis) {
-            lines.push(...formatAnalysisSection(
-              r.arrivalAnalysis,
-              arrForecastLabel,
-              r.arrivalAnalysis.isTafAnalysis ? 'TAF' : 'METAR',
-              r.arrivalTime,
-              null
-            ));
+            // Suppress if same TAF period covers both dep and arrival
+            const sameAsDep = r.departureAnalysis && r.arrivalAnalysis &&
+              r.departureAnalysis.isTafAnalysis && r.arrivalAnalysis.isTafAnalysis &&
+              r.departureAnalysis.tafPeriodLabel === r.arrivalAnalysis.tafPeriodLabel &&
+              r.departureAnalysis.recommendation === r.arrivalAnalysis.recommendation;
+            if (sameAsDep) {
+              lines.push(`${arrForecastLabel}`);
+              lines.push('-'.repeat(50));
+              lines.push('Same TAF period covers both departure and arrival time — see above.');
+            } else {
+              lines.push(...formatAnalysisSection(
+                r.arrivalAnalysis,
+                arrForecastLabel,
+                r.arrivalAnalysis.isTafAnalysis ? 'TAF' : 'METAR',
+                r.arrivalTime,
+                null
+              ));
+            }
           } else {
             lines.push(arrForecastLabel);
             lines.push('-'.repeat(50));
@@ -3418,7 +3446,36 @@
 
   function printReport() {
     populatePdfHeader();
+
+    // Inject hard page-break divs before each leg section (except the first)
+    // and before the CFI signature block. Chrome honours explicit elements
+    // more reliably than CSS page-break-before on existing elements.
+    const legSections = document.querySelectorAll('.leg-section');
+    const insertedBreaks = [];
+    legSections.forEach((el, i) => {
+      if (i > 0) {
+        const br = document.createElement('div');
+        br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
+        br.setAttribute('data-print-break', '1');
+        el.parentNode.insertBefore(br, el);
+        insertedBreaks.push(br);
+      }
+    });
+
+    // Insert page break before CFI signature
+    const sig = document.getElementById('pdf-signature');
+    if (sig) {
+      const br = document.createElement('div');
+      br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
+      br.setAttribute('data-print-break', '1');
+      sig.parentNode.insertBefore(br, sig);
+      insertedBreaks.push(br);
+    }
+
     window.print();
+
+    // Clean up injected breaks after print dialog closes
+    insertedBreaks.forEach(el => el.parentNode && el.parentNode.removeChild(el));
   }
 
   function showError(msg) {
