@@ -792,6 +792,7 @@
     .route-advisory.nogo  { background: rgba(220,38,38,0.1);    border-color: var(--red);   color: var(--white); }
     .route-advisory.info  { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.3); color: var(--slate-light); }
     .route-advisory.pass  { background: rgba(22,163,74,0.08);   border-color: var(--green); color: var(--white); }
+    .advisory-note { font-size: 10px; margin-top: 3px; opacity: 0.85; }
     .winds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
     .wind-level {
       background: var(--navy); border: 1px solid rgba(200,164,77,0.2);
@@ -1199,6 +1200,7 @@
       .route-advisory.nogo  { background: #fee2e2 !important; color: #991b1b !important; border-color: #DC2626 !important; }
       .route-advisory.pass  { background: #d1fae5 !important; color: #166534 !important; border-color: #16A34A !important; }
       .route-advisory.info  { background: #f1f5f9 !important; color: #444    !important; border-color: #94A3B8 !important; }
+      .advisory-note        { opacity: 1 !important; color: inherit !important; }
       .wind-level { background: #f5f5f5 !important; border-color: #ddd !important; }
       .wind-level-alt { color: #555 !important; }
       .wind-level-val { color: #111 !important; }
@@ -2603,7 +2605,7 @@
           ? `${s.distNm}nm from route`
           : `${s.distNm}nm from ${s.nearEnd}`;
         html += `<div class="route-advisory ${cls}">${icon} ${s.name} — ${distDesc}
-          <div style="font-size:10px;margin-top:3px;opacity:0.85;">${s.note}</div>
+          <div class="advisory-note">${s.note}</div>
         </div>`;
       }
       html += `</div>`;
@@ -2623,7 +2625,7 @@
           ? `${t.distNm}nm from route`
           : `${t.distNm}nm from ${t.nearEnd}`;
         html += `<div class="route-advisory warn">⛰ ${t.name} — ${distDesc}
-          <div style="font-size:10px;margin-top:3px;opacity:0.85;">${t.note}</div>
+          <div class="advisory-note">${t.note}</div>
         </div>`;
       }
       html += `</div>`;
@@ -2639,6 +2641,11 @@
         if (s.rawText) html += `<div class="pirep-raw">${s.rawText}</div>`;
       }
       html += `</div>`;
+    } else {
+      html += `<div class="route-section">
+        <div class="route-section-label">Convective SIGMETs</div>
+        <div class="route-advisory pass">✅ No active convective SIGMETs near route</div>
+      </div>`;
     }
 
     // ── G-AIRMETs ──
