@@ -2623,7 +2623,7 @@
 
       // ── Personal minimums rows ──
       const mins = [
-        { k: `VIS ≥${a.minVisibilitySM}SM`,  v: a.visibility !== null ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A' },
+        { k: `VIS ≥${a.minVisibilitySM}SM`,  v: a.visibility !== null && !isNaN(a.visibility) ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A' },
         { k: `CEIL ≥${a.minCeilingFt}ft`,    v: ceilingPass ? 'PASS' : 'FAIL' },
         { k: `XWD ≤${a.maxCrosswindKts}kts`, v: xwdStatus },
         { k: `GUST ≤${a.maxGustKts}kts`,     v: gustVal },
@@ -2671,8 +2671,13 @@
         }
       }
 
-      // ── Template ──
-      return `
+      // Format visibility — P6SM stored as 6.1, display as >6SM
+      function formatVis(vis) {
+        if (vis === null || vis === undefined || isNaN(vis)) return 'N/A';
+        // Values like 6.1, 10.1 etc are P-prefix encodings — display as >X
+        if (vis !== Math.floor(vis) && (vis * 10) % 10 === 1) return `>${Math.floor(vis)}SM`;
+        return `${vis}SM`;
+      }
         <div class="analysis-section">
           <div class="analysis-section-label">
             ${label}
@@ -2690,7 +2695,7 @@
           <div class="metrics">
             <div class="metric">
               <div class="metric-label">Visibility</div>
-              <div class="metric-value ${visClass}">${a.visibility !== null ? a.visibility + 'SM' : 'N/A'}</div>
+              <div class="metric-value ${visClass}">${formatVis(a.visibility)}</div>
             </div>
             <div class="metric">
               <div class="metric-label">Ceiling</div>
