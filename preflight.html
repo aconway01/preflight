@@ -3071,6 +3071,13 @@
         }
       }
 
+      // Helper: format visibility for text output (P6SM stored as 6.1 → >6SM)
+      function fmtVis(vis) {
+        if (vis === null || vis === undefined || isNaN(vis)) return 'Unavailable';
+        if (vis !== Math.floor(vis) && (vis * 10) % 10 === 1) return `>${Math.floor(vis)}SM`;
+        return `${vis}SM`;
+      }
+
       // Personal minimums check
       const ceilingPass = a.ceilingType === 'VV' ? false : (a.ceiling === null ? true : a.ceiling >= a.minCeilingFt);
       const gustVal     = a.gustSpeed === null ? 'N/A' : (a.gustSpeed > a.maxGustKts ? 'FAIL' : 'PASS');
@@ -3094,7 +3101,7 @@
       section.push('');
       section.push('Conditions:');
       section.push(`  Met Category:   ${a.flightCategory || '—'}`);
-      section.push(`  Visibility:     ${a.visibility !== null ? a.visibility + 'SM' : 'Unavailable'}`);
+      section.push(`  Visibility:     ${fmtVis(a.visibility)}`);
       section.push(`  Ceiling:        ${a.ceilingLabel || 'CLR'}`);
       section.push(`  Crosswind:      ${xwdDisp}`);
       section.push(`  Temperature:    ${tempDisp}`);
