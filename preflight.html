@@ -1107,6 +1107,9 @@
       .leg-rec-badge { white-space: normal; word-break: break-word; font-size: 9px; }
     }
 
+    /* Elements that exist only for PDF output — hidden in normal view */
+    #pdf-signature { display: none; }
+
     /* ── PRINT / PDF ── */
     @media print {
       @page {
@@ -1328,6 +1331,7 @@
       }
 
       /* ── CFI signature block ── */
+      /* Hidden outside print via base rule below; shown in print unless sig-hidden is set */
       #pdf-signature {
         display: block;
         padding-top: 24px;
@@ -1753,7 +1757,7 @@
   <div id="legReports"></div>
 
   <!-- PDF-only CFI signature block — hidden in normal view, shown on print -->
-  <div id="pdf-signature" style="display:none;">
+  <div id="pdf-signature">
     <div class="sig-title">CFI Review &amp; Sign-Off</div>
     <div class="sig-grid">
       <div>
@@ -2523,6 +2527,13 @@
 
     let html = `<div class="route-panel-title">Route Intelligence — ${leg.departure} → ${leg.arrival}</div>`;
 
+    // ── CONUS Warning ──
+    if (ri.conusWarning) {
+      html += `<div class="route-section">
+        <div class="route-advisory nogo">❌ ${ri.conusWarning}</div>
+      </div>`;
+    }
+
     // ── Hemispheric Rule ──
     if (ri.hemispheric) {
       const h   = ri.hemispheric;
@@ -3239,6 +3250,12 @@
         lines.push('ROUTE INTELLIGENCE');
         lines.push('-'.repeat(50));
 
+        // CONUS warning
+        if (ri.conusWarning) {
+          lines.push(`❌ CONUS BOUNDARY: ${ri.conusWarning}`);
+          lines.push('');
+        }
+
         // Hemispheric rule
         if (ri.hemispheric) {
           lines.push(`Hemispheric Rule:  ${ri.hemispheric.note}`);
@@ -3466,11 +3483,12 @@
     }
     lines.push('');
 
-    const routeSlug = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
+    const routeSlug  = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
+    const flightDate = document.getElementById('flightDate')?.value || new Date().toISOString().slice(0, 10);
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const a    = document.createElement('a');
     a.href     = URL.createObjectURL(blob);
-    a.download = `CA-Preflight-${routeSlug}-${new Date().toISOString().slice(0,10)}.txt`;
+    a.download = `CA-Preflight-${routeSlug}-${flightDate}.txt`;
     a.click();
   }
 
@@ -3549,7 +3567,7 @@
 
     window.print();
 
-    // Clean up: restore document title, signature visibility, and injected breaks
+    // Clean up: restore document title, remove sig-hidden so base CSS hides element, remove injected breaks
     document.title = originalTitle;
     if (sig) sig.classList.remove('sig-hidden');
     insertedBreaks.forEach(el => el.parentNode && el.parentNode.removeChild(el));
