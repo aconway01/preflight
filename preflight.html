@@ -1041,6 +1041,7 @@
       font-size: 10px; color: var(--slate);
       opacity: 0.6; line-height: 1.6; max-width: 560px;
     }
+
     .footer-logo {
       height: 48px; width: auto;
       filter: brightness(1.4);
@@ -1085,12 +1086,43 @@
       .leg-rec-badge { white-space: normal; word-break: break-word; font-size: 9px; }
     }
 
-    /* ── PRINT ── */
+    /* ── PRINT / PDF ── */
     @media print {
-      body { background: white; color: #111; }
+      @page {
+        size: letter;
+        margin: 0.65in 0.7in 0.65in 0.7in;
+      }
+      @page :first {
+        margin-top: 0.5in;
+      }
+
+      body { background: white; color: #111; font-size: 10pt; }
       body::before, body::after { display: none; }
       .panel, .actions-bar, .header-meta { display: none !important; }
-      .wrap { padding: 0; }
+      .wrap { padding: 0; max-width: 100%; }
+
+      /* Hide live clock, show static report timestamp instead */
+      header { padding: 0 0 10px; margin-bottom: 16px; border-bottom: 2px solid #111; }
+      .header-clock-utc, .header-clock-local { display: none !important; }
+
+      /* PDF document header — route + pilot info injected via before pseudo */
+      #pdf-header {
+        display: block !important;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+      }
+      #pdf-header-route {
+        font-family: 'Barlow Condensed', sans-serif;
+        font-size: 18pt; font-weight: 700;
+        color: #111; letter-spacing: 1px;
+      }
+      #pdf-header-meta {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 8pt; color: #555;
+        margin-top: 3px;
+      }
+
       footer {
         border-top: 1px solid #ccc;
         margin-top: 24px; padding-top: 12px;
@@ -1105,7 +1137,7 @@
       .verdict-title  { color: #444 !important; opacity: 1; }
       .verdict-rec, .verdict-icon, .verdict-route { color: #111 !important; }
 
-      .reports-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .reports-grid { grid-template-columns: 1fr; gap: 12px; }
       .station-card { border: 1px solid #ccc; break-inside: avoid; background: white; }
       .card-summary { background: #f0f0f0 !important; }
       .card-detail  { display: block !important; }
@@ -1133,9 +1165,9 @@
       .card-expand-hint { display: none; }
       .logo-img { height: 40px; width: auto; filter: none; mix-blend-mode: normal; }
       .logo-text .tool { color: #444 !important; }
-      .header-clock-utc { color: #333 !important; font-size: 16px; }
-      .header-clock-utc-label { color: #333 !important; opacity: 1; }
-      .header-clock-local { color: #555 !important; }
+
+      /* Hide live clock — display:none already set above, these color rules are redundant */
+      /* .header-clock-utc, .header-clock-local handled by display:none rule above */
 
       /* ── Previously invisible print elements ── */
       .raw-section-label { color: #444 !important; opacity: 1; }
@@ -1177,10 +1209,13 @@
       .night-flag.day      { background: #d1fae5 !important; color: #166534 !important; }
       .night-flag.currency { background: #fee2e2 !important; color: #991b1b !important; }
       .pirep-raw { color: #666 !important; }
-      #flightInfoPanel, #currencyPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
-      #flightInfoPanelBody, #currencyPanelBody { display: block !important; }
+      #flightInfoPanel, #currencyPanel, #minimumsPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      #flightInfoPanelBody, #currencyPanelBody, #minimumsPanelBody { display: block !important; }
       .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .flight-info-field label { color: #555 !important; }
+      .mins-field label { color: #555 !important; }
+      .mins-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
+      .mins-reset { display: none !important; }
       .currency-item { border-bottom-color: #ddd; }
       .currency-label { color: #111 !important; }
       .currency-desc { color: #555 !important; }
@@ -1203,13 +1238,74 @@
       .checklist-item { border-bottom-color: #ddd; }
       .checklist-label { color: #111 !important; }
       .checklist-desc { color: #555 !important; }
-      .checklist-notes { display: none; }
+      .checklist-notes {
+        display: block !important;
+        background: #f9f9f9 !important; color: #333 !important;
+        border: 1px solid #ddd !important;
+        resize: none; min-height: 0;
+        font-size: 9pt;
+      }
+      /* Suppress native input chrome on print */
+      input[type="datetime-local"], input[type="date"], input[type="number"], input[type="text"] {
+        -webkit-appearance: none; appearance: none;
+        border-radius: 0;
+      }
       .checklist-status { opacity: 1; }
       .checklist-status.complete   { background: #d1fae5; color: #166534; }
       .checklist-status.incomplete { background: #fef3c7; color: #92400e; }
       .solo-locked-note { display: none !important; }
       .concern-item[style], .positive-item[style] { opacity: 1 !important; color: #555 !important; }
       .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
+
+      /* ── Page break control ── */
+      .station-card       { page-break-inside: avoid; break-inside: avoid; }
+      .route-panel        { page-break-inside: avoid; break-inside: avoid; }
+      .route-section      { page-break-inside: avoid; break-inside: avoid; }
+      .analysis-section   { page-break-inside: avoid; break-inside: avoid; }
+      .leg-section        { page-break-before: auto; }
+      .leg-section + .leg-section { page-break-before: always; break-before: always; }
+
+      /* ── CFI signature block — always last on final page ── */
+      #pdf-signature {
+        display: block !important;
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 2px solid #111;
+        page-break-inside: avoid; break-inside: avoid;
+      }
+      #pdf-signature .sig-title {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 8pt; letter-spacing: 1.5px;
+        text-transform: uppercase; color: #333;
+        margin-bottom: 18px;
+      }
+      #pdf-signature .sig-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+      #pdf-signature .sig-field {
+        border-bottom: 1px solid #333;
+        padding-bottom: 3px;
+        min-height: 28px;
+      }
+      #pdf-signature .sig-field-label {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 7pt; color: #666;
+        margin-top: 4px;
+      }
+      #pdf-signature .sig-remarks {
+        border-bottom: 1px solid #333;
+        min-height: 40px;
+        margin-bottom: 4px;
+      }
+      #pdf-signature .sig-remarks-label {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 7pt; color: #666;
+        margin-top: 4px;
+      }
+    } /* end @media print */
   </style>
 </head>
 
@@ -1229,6 +1325,12 @@
     </div>
   </header>
 
+  <!-- PDF-only document header — hidden in normal view, shown on print -->
+  <div id="pdf-header" style="display:none;">
+    <div id="pdf-header-route"></div>
+    <div id="pdf-header-meta"></div>
+  </div>
+
   <!-- Flight Info Panel -->
   <div class="panel" id="flightInfoPanel">
     <div class="panel-label open" id="flightInfoPanelLabel" onclick="togglePanel('flightInfo')">
@@ -1238,7 +1340,7 @@
     <div class="panel-body open" id="flightInfoPanelBody">
       <div class="flight-info-grid">
         <div class="flight-info-field">
-          <label>PIC / CFI Name</label>
+          <label>Pilot Name</label>
           <input type="text" id="picName" placeholder="Full name" autocomplete="name">
         </div>
         <div class="flight-info-field">
@@ -1579,11 +1681,30 @@
   </div>
 
   <div class="actions-bar" id="actionsBar">
-    <button class="btn-action" onclick="window.print()">Print Report</button>
+    <button class="btn-action" onclick="printReport()">Print / Save PDF</button>
     <button class="btn-action" onclick="saveReport()">Save as Text</button>
   </div>
 
-  <div id="legReports"></div>
+  <!-- PDF-only CFI signature block — hidden in normal view, shown on print -->
+  <div id="pdf-signature" style="display:none;">
+    <div class="sig-title">CFI Review &amp; Sign-Off</div>
+    <div class="sig-grid">
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">CFI Signature</div>
+      </div>
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">Printed Name &amp; Certificate No.</div>
+      </div>
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">Date &amp; Time</div>
+      </div>
+    </div>
+    <div class="sig-remarks"></div>
+    <div class="sig-remarks-label">Remarks / Conditions / Limitations</div>
+  </div>
 
   <footer>
     <div class="disclaimer">
@@ -1603,20 +1724,31 @@
   const SOLO_MINS       = CA_DATA.SOLO_MINS;
 
   // ── CLOCK ──
-  function updateClock() {
-    const now = new Date();
-    const tz  = document.getElementById('tzSelect')?.value || 'America/New_York';
-    const local = now.toLocaleString('en-US', {
-      timeZone: tz,
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    });
-    const utc = now.toISOString().slice(11, 19);
-    const tzLabel = tzAbbr(tz);
+  // ── UTILITIES ──
+  function tzAbbr(tz) {
+    return CA_DATA.TZ_ABBRS[tz] || 'LT';
+  }
 
-    const utcEl   = document.getElementById('clockUtc');
-    const localEl = document.getElementById('clockLocal');
-    if (utcEl)   utcEl.innerHTML   = `${utc}<span class="header-clock-utc-label">Z</span>`;
-    if (localEl) localEl.textContent = `${local} ${tzLabel}`;
+  function updateClock() {
+    try {
+      const now = new Date();
+      const tz  = document.getElementById('tzSelect')?.value || 'America/New_York';
+      const local = now.toLocaleString('en-US', {
+        timeZone: tz,
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
+      const utc = now.toISOString().slice(11, 19);
+      const tzLabel = tzAbbr(tz);
+
+      const utcEl   = document.getElementById('clockUtc');
+      const localEl = document.getElementById('clockLocal');
+      if (utcEl)   utcEl.innerHTML   = `${utc}<span class="header-clock-utc-label">Z</span>`;
+      if (localEl) localEl.textContent = `${local} ${tzLabel}`;
+    } catch(e) {
+      const utcEl = document.getElementById('clockUtc');
+      if (utcEl) utcEl.innerHTML = `ERR<span class="header-clock-utc-label">Z</span>`;
+      console.error('Clock error:', e);
+    }
   }
   updateClock();
   setInterval(updateClock, 1000);
@@ -2311,10 +2443,6 @@
     return 'go';
   }
 
-  function tzAbbr(tz) {
-    return CA_DATA.TZ_ABBRS[tz] || 'LT';
-  }
-
   // ── ROUTE INTELLIGENCE PANEL ──
   function buildRoutePanel(ri, leg, tz, nightLandingsCount) {
     const el = document.createElement('div');
@@ -2828,7 +2956,7 @@
     const studentName= document.getElementById('studentName')?.value?.trim()|| '—';
     const picCert    = document.getElementById('picCert')?.value?.trim()    || '—';
     const flightDate = document.getElementById('flightDate')?.value         || '—';
-    lines.push(`PIC / CFI:    ${picName}  (Cert: ${picCert})`);
+    lines.push(`Pilot:        ${picName}  (Cert: ${picCert})`);
     lines.push(`Student:      ${studentName}`);
     lines.push(`Flight Date:  ${flightDate}`);
     lines.push(`Route:        ${route}`);
@@ -3201,6 +3329,42 @@
     a.href     = URL.createObjectURL(blob);
     a.download = `CA-Preflight-${routeSlug}-${new Date().toISOString().slice(0,10)}.txt`;
     a.click();
+  }
+
+  // ── PDF HEADER ──
+  // Populates the print-only document header with current flight data
+  function populatePdfHeader() {
+    const legs       = window._lastLegs;
+    const tz         = window._lastTz || 'America/New_York';
+    const picName    = document.getElementById('picName')?.value?.trim() || '';
+    const studentName= document.getElementById('studentName')?.value?.trim() || '';
+    const flightDate = document.getElementById('flightDate')?.value || '';
+    const flightRules= window._lastFlightRules || 'VFR';
+
+    const routeEl = document.getElementById('pdf-header-route');
+    const metaEl  = document.getElementById('pdf-header-meta');
+    if (!routeEl || !metaEl || !legs) return;
+
+    const routeStr = legs.map(l => `${l.departure} → ${l.arrival}`).join('  ·  ');
+    routeEl.textContent = `Preflight Brief  ·  ${routeStr}`;
+
+    const parts = [];
+    if (flightDate) {
+      // flightDate is YYYY-MM-DD — parse as local date to avoid UTC offset shifting the day
+      const [y, m, d] = flightDate.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      parts.push(dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+    }
+    if (flightRules) parts.push(flightRules);
+    if (picName) parts.push(`PIC: ${picName}`);
+    if (studentName) parts.push(`Student: ${studentName}`);
+    parts.push(`Generated: ${new Date().toLocaleString('en-US', { timeZone: tz, dateStyle: 'medium', timeStyle: 'short' })} ${tzAbbr(tz)}`);
+    metaEl.textContent = parts.join('  ·  ');
+  }
+
+  function printReport() {
+    populatePdfHeader();
+    window.print();
   }
 
   function showError(msg) {
