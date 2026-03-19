@@ -121,13 +121,6 @@
       display: block; margin-top: 4px;
     }
 
-    .header-meta-note {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 9px; color: var(--slate);
-      opacity: 0.5; display: block; margin-top: 3px;
-      letter-spacing: 0.5px;
-    }
-
     /* ── PANELS ── */
     .panel {
       background: var(--panel);
@@ -211,6 +204,39 @@
       border-bottom: 1px solid rgba(200,164,77,0.08);
     }
     .currency-item:last-child { border-bottom: none; }
+
+    @media (max-width: 480px) {
+      .currency-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .currency-input-group {
+        justify-content: space-between;
+        width: 100%;
+      }
+      .currency-badge {
+        flex: 1;
+      }
+      /* Header — compact on narrow phones */
+      header {
+        padding: 10px 0 10px;
+        margin-bottom: 20px;
+      }
+      .logo-img {
+        height: 36px;
+      }
+      .logo-text .tool {
+        font-size: 8px;
+      }
+      .header-clock-utc {
+        font-size: 15px;
+        letter-spacing: 1px;
+      }
+      .header-clock-local {
+        font-size: 9px;
+        margin-top: 2px;
+      }
+    }
 
     .currency-label {
       font-family: 'IBM Plex Mono', monospace;
@@ -1101,7 +1127,6 @@
       .header-clock-utc { color: #333 !important; font-size: 16px; }
       .header-clock-utc-label { color: #333 !important; opacity: 1; }
       .header-clock-local { color: #555 !important; }
-      .header-meta-note { color: #888 !important; opacity: 1; }
 
       /* ── Previously invisible print elements ── */
       .raw-section-label { color: #444 !important; opacity: 1; }
@@ -1192,7 +1217,6 @@
     <div class="header-meta">
       <span class="header-clock-utc" id="clockUtc">—<span class="header-clock-utc-label">Z</span></span>
       <span class="header-clock-local" id="clockLocal">— Local</span>
-      <span class="header-meta-note">Internal Use Only</span>
     </div>
   </header>
 
