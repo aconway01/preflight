@@ -700,8 +700,20 @@
     }
 
     /* ── ACTIONS BAR ── */
-    .actions-bar { display: none; justify-content: flex-end; gap: 12px; margin-bottom: 28px; }
+    .actions-bar { display: none; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 28px; }
     .actions-bar.visible { display: flex; }
+
+    .cfi-toggle-label {
+      display: flex; align-items: center; gap: 7px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate); opacity: 0.75; cursor: pointer;
+      user-select: none; margin-right: 4px;
+    }
+    .cfi-toggle-label input[type="checkbox"] {
+      accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer;
+    }
+    .cfi-toggle-label:hover { opacity: 1; }
 
     .btn-action {
       background: none;
@@ -1177,8 +1189,7 @@
       .concern-item, .positive-item { color: #222 !important; border-bottom-color: #ddd; }
       .taf-content { display: none !important; }
       .taf-toggle  { display: none; }
-      .raw-section { display: none !important; }
-      .card-expand-hint { display: none; }
+      .raw-section { display: none !important; }      .card-expand-hint { display: none; }
       .logo-img { height: 40px; width: auto; filter: none; mix-blend-mode: normal; }
       .logo-text .tool { color: #444 !important; }
 
@@ -1186,7 +1197,7 @@
       /* .header-clock-utc, .header-clock-local handled by display:none rule above */
 
       /* ── Previously invisible print elements ── */
-      .raw-section-label { color: #444 !important; opacity: 1; }
+      /* raw-section is display:none — no child rules needed */
       .block-title { color: #444 !important; opacity: 1; }
       .mins-title { color: #444 !important; opacity: 1; }
       .analysis-period-label { color: #444 !important; opacity: 1; }
@@ -1252,6 +1263,9 @@
       .limitation-title  { color: #111 !important; }
       .limitation-detail { color: #555 !important; }
       .panel-label { color: #333 !important; opacity: 1; cursor: default; }
+      .toggle-arrow { display: none !important; }
+      .taf-toggle   { display: none !important; }
+      .card-expand-hint { display: none !important; }
       .checklist-item { border-bottom-color: #ddd; }
       .checklist-label { color: #111 !important; }
       .checklist-desc { color: #555 !important; }
@@ -1272,7 +1286,6 @@
       .checklist-status.incomplete { background: #fef3c7; color: #92400e; }
       .solo-locked-note { display: none !important; }
       .concern-item[style], .positive-item[style] { opacity: 1 !important; color: #555 !important; }
-      .raw-section div[style] { opacity: 1 !important; color: #555 !important; }
 
       /* ── Page break control ── */
       /* JS in printReport() injects explicit break divs for leg sections and CFI signature.
@@ -1719,6 +1732,10 @@
   </div>
 
   <div class="actions-bar" id="actionsBar">
+    <label class="cfi-toggle-label" id="cfiToggleWrap" title="Include a CFI sign-off block on the final page of the PDF">
+      <input type="checkbox" id="cfiSignoffToggle" checked>
+      <span class="cfi-toggle-text">CFI Sign-Off Page</span>
+    </label>
     <button class="btn-action" onclick="printReport()">Print / Save PDF</button>
     <button class="btn-action" onclick="saveReport()">Save as Text</button>
   </div>
@@ -1898,7 +1915,13 @@
   }
 
   document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
-    radio.addEventListener('change', updateSoloEndorsementVisibility);
+    radio.addEventListener('change', () => {
+      updateSoloEndorsementVisibility();
+      // Student Solo always requires CFI sign-off; other modes leave the choice to the pilot
+      const isSolo = document.querySelector('input[name="flightRules"]:checked')?.value === 'SOLO';
+      const toggle = document.getElementById('cfiSignoffToggle');
+      if (toggle && isSolo) toggle.checked = true;
+    });
   });
 
   // Set today's date as default for flight date
@@ -2509,6 +2532,7 @@
     if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
       html += `<div class="route-section">
         <div class="route-section-label">Winds Aloft · Nearest Station: ${ri.windsAloft.station || '—'}</div>
+        ${ri.windsAloft.staleWarning ? `<div class="route-advisory warn" style="margin-bottom:8px;">⚠ ${ri.windsAloft.staleWarning}</div>` : ''}
         <div class="winds-grid">`;
       for (const lvl of ri.windsAloft.levels) {
         const isCruise = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500;
@@ -2923,10 +2947,15 @@
           depA.tafPeriodLabel === arrA.tafPeriodLabel &&
           depA.recommendation === arrA.recommendation;
         if (sameAsDep) {
+          // Role-aware message — "departure and arrival" refers to two TIMES at this
+          // same airport, not two different airports. Clarify this explicitly.
+          const sameMsg = role === 'Departure'
+            ? 'Both takeoff time and end-of-leg time fall within the same TAF period — forecast unchanged.'
+            : 'TAF period unchanged between leg departure and arrival — see forecast above.';
           arrivalSectionHtml = `
             <div class="analysis-section">
               <div class="analysis-section-label">${arrivalForecastLabel} <span class="source-tag">TAF</span></div>
-              <div class="no-taf-notice" style="color:var(--slate);">Same TAF period covers both departure and arrival — see above.</div>
+              <div class="no-taf-notice" style="color:var(--slate);">${sameMsg}</div>
             </div>
           `;
         } else {
@@ -3199,6 +3228,9 @@
         // Winds aloft
         if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
           lines.push(`Winds Aloft (${ri.windsAloft.station || '?'}):`);
+          if (ri.windsAloft.staleWarning) {
+            lines.push(`  ⚠ ${ri.windsAloft.staleWarning}`);
+          }
           for (const lvl of ri.windsAloft.levels) {
             const star = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500 ? ' ★' : '';
             if (lvl.calm) {
@@ -3357,7 +3389,10 @@
             if (sameAsDep) {
               lines.push(`${arrForecastLabel}`);
               lines.push('-'.repeat(50));
-              lines.push('Same TAF period covers both departure and arrival time — see above.');
+              const sameMsg = role === 'Departure'
+                ? 'Both takeoff time and end-of-leg time fall within the same TAF period — forecast unchanged.'
+                : 'TAF period unchanged between leg departure and arrival — see forecast above.'
+              lines.push(sameMsg);
             } else {
               lines.push(...formatAnalysisSection(
                 r.arrivalAnalysis,
@@ -3454,9 +3489,14 @@
   function printReport() {
     populatePdfHeader();
 
+    const includeCfi = document.getElementById('cfiSignoffToggle')?.checked !== false;
+    const sig = document.getElementById('pdf-signature');
+
+    // Show or hide CFI signature block based on toggle
+    if (sig) sig.style.display = includeCfi ? 'block' : 'none';
+
     // Inject hard page-break divs before each leg section (except the first)
-    // and before the CFI signature block. Chrome honours explicit elements
-    // more reliably than CSS page-break-before on existing elements.
+    // and optionally before the CFI signature block.
     const legSections = document.querySelectorAll('.leg-section');
     const insertedBreaks = [];
     legSections.forEach((el, i) => {
@@ -3469,9 +3509,8 @@
       }
     });
 
-    // Insert page break before CFI signature
-    const sig = document.getElementById('pdf-signature');
-    if (sig) {
+    // Insert page break before CFI signature only if it's included
+    if (includeCfi && sig) {
       const br = document.createElement('div');
       br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
       br.setAttribute('data-print-break', '1');
@@ -3481,7 +3520,8 @@
 
     window.print();
 
-    // Clean up injected breaks after print dialog closes
+    // Clean up: restore signature visibility and remove injected breaks
+    if (sig) sig.style.display = 'none';
     insertedBreaks.forEach(el => el.parentNode && el.parentNode.removeChild(el));
   }
 
