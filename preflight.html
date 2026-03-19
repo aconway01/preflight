@@ -1405,12 +1405,12 @@
     <div class="panel-body open" id="flightInfoPanelBody">
       <div class="flight-info-grid">
         <div class="flight-info-field">
-          <label>Pilot Name</label>
+          <label>PIC Name</label>
           <input type="text" id="picName" placeholder="Full name" autocomplete="name">
         </div>
         <div class="flight-info-field">
-          <label>Student Name</label>
-          <input type="text" id="studentName" placeholder="Full name (if applicable)" autocomplete="off">
+          <label>Student</label>
+          <input type="text" id="studentName" placeholder="Student under instruction, if dual or supervised solo" autocomplete="off">
         </div>
         <div class="flight-info-field">
           <label>Certificate / License No.</label>
@@ -3074,8 +3074,8 @@
     const studentName= document.getElementById('studentName')?.value?.trim()|| '—';
     const picCert    = document.getElementById('picCert')?.value?.trim()    || '—';
     const flightDate = document.getElementById('flightDate')?.value         || '—';
-    lines.push(`Pilot:        ${picName}  (Cert: ${picCert})`);
-    lines.push(`Student:      ${studentName}`);
+    lines.push(`PIC:          ${picName}  (Cert: ${picCert})`);
+    lines.push(`Student:      ${studentName || '—'}`);
     lines.push(`Flight Date:  ${flightDate}`);
     lines.push(`Route:        ${route}`);
     lines.push(`Flight Rules: ${flightRules}`);
