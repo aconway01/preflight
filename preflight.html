@@ -2976,7 +2976,7 @@
     card.innerHTML = `
       ${summaryHtml}
       <div class="card-detail">
-        ${buildAnalysisSection(depA, r.departureSource === 'TAF' ? 'Conditions at Departure (TAF Forecast)' : 'Current Conditions', r.departureSource || 'METAR', r.departureTime, true, r.metarRaw)}
+        ${buildAnalysisSection(depA, r.departureSource === 'TAF' ? (role === 'Arrival' ? 'Conditions at Arrival (TAF Forecast)' : 'Conditions at Departure (TAF Forecast)') : 'Current Conditions', r.departureSource || 'METAR', r.departureTime, true, r.metarRaw)}
         ${arrivalSectionHtml}
         ${rawSectionHtml}
       </div>
@@ -3326,7 +3326,9 @@
 
         // Current conditions section — label changes when source is TAF (stale METAR)
         const depSource = r.departureSource || 'METAR';
-        const depLabel  = depSource === 'TAF' ? 'CONDITIONS AT DEPARTURE (TAF FORECAST)' : 'CURRENT CONDITIONS';
+        const depLabel  = depSource === 'TAF'
+          ? (role === 'Arrival' ? 'CONDITIONS AT ARRIVAL (TAF FORECAST)' : 'CONDITIONS AT DEPARTURE (TAF FORECAST)')
+          : 'CURRENT CONDITIONS';
         lines.push(...formatAnalysisSection(
           r.departureAnalysis,
           depLabel,
