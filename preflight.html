@@ -1232,6 +1232,7 @@
           <label for="frSolo">Student Solo</label>
         </div>
       </div>
+      <div class="solo-locked-note" id="soloLockedNote"></div>
     </div>
   </div>
 
@@ -1480,7 +1481,6 @@
         </div>
       </div>
       <button class="mins-reset" id="minsResetBtn" onclick="resetMinimums()">Reset to defaults</button>
-      <div class="solo-locked-note" id="soloLockedNote">⚠ Student Solo — minimums locked to FAR 61.89 (3SM visibility, 1,000ft ceiling). Not adjustable.</div>
     </div>
   </div>
 
@@ -2207,7 +2207,7 @@
 
     data.legs.forEach((leg, i) => {
       const legRec  = deriveTripRec(leg.reports.map(r => r.recommendation));
-      const recCls  = legClass(legRec);
+      const recCls  = tripClass(legRec);
 
       const depDisplay = legs[i].flightMin
         ? `DEP ${formatLocalForDisplay(leg.departureTime, tz)} · ARR ${formatLocalForDisplay(leg.arrivalTime, tz)} ${tzAbbr(tz)} · ${legs[i].flightMin}min`
@@ -2261,12 +2261,6 @@
     return 'go';
   }
 
-  function legClass(rec) {
-    if (rec.startsWith('NO-GO'))  return 'nogo';
-    if (rec.includes('CAUTION'))  return 'caution';
-    return 'go';
-  }
-
   function tripIcon(rec) {
     if (rec.startsWith('NO-GO'))  return '✖';
     if (rec.includes('CAUTION'))  return '⚠';
@@ -2284,7 +2278,6 @@
     return CA_DATA.TZ_ABBRS[tz] || 'LT';
   }
 
-  // ── CARD BUILDER ──
   // ── ROUTE INTELLIGENCE PANEL ──
   function buildRoutePanel(ri, leg, tz, nightLandingsCount) {
     const el = document.createElement('div');
