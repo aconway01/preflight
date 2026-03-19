@@ -1138,9 +1138,13 @@
       .verdict-title  { color: #444 !important; opacity: 1; }
       .verdict-rec, .verdict-icon, .verdict-route { color: #111 !important; }
 
-      .reports-grid { grid-template-columns: 1fr; gap: 12px; }
+      /* Reduce spacing to prevent near-blank pages before leg breaks */
+      .leg-section        { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+      .reports-grid       { grid-template-columns: 1fr; gap: 8px; margin-bottom: 0 !important; }
+      .route-panel        { margin-bottom: 8px !important; }
+      .station-card       { margin-bottom: 0 !important; }
       .station-card { border: 1px solid #ccc; background: white; }
-      .card-summary { background: #f0f0f0 !important; }
+      .card-summary { background: #f0f0f0 !important; padding: 10px 14px !important; }
       .card-detail  { display: block !important; }
       .card-station { color: #111 !important; }
       /* Reset opacity on all card/panel content — base CSS uses opacity for dark-mode
@@ -1154,7 +1158,8 @@
       .min-na       { color: #888 !important; }
       .pirep-raw    { color: #555 !important; }
       .flight-cat   { border: 1px solid #999; color: #111 !important; background: #eee !important; }
-      .analysis-section { border-bottom: 1px solid #ddd; }
+      .analysis-section { border-bottom: 1px solid #ddd; padding: 10px 14px; }
+      .analysis-section:last-child { border-bottom: none; padding-bottom: 6px; }
       .analysis-section-label { color: #333 !important; opacity: 1; }
       .metar-raw    { background: #f5f5f5; border: 1px solid #ddd; color: #333 !important; }
       .metric       { background: #f5f5f5; border: 1px solid #ddd; }
