@@ -2543,7 +2543,7 @@
         const isNight = t < sunrise || t > sunset;
         if (isNight) {
           const currency = label === 'Departure' && !isNaN(nightLandingsCount) && nightLandingsCount >= 3;
-          let html = `<div class="night-flag night" style="margin-top:8px;">🌙 Night ${label.toLowerCase()}</div>`;
+          let html = `<div class="night-flag night" style="margin-top:8px;">NIGHT ${label.toUpperCase()}</div>`;
           if (label === 'Departure') {
             html += currency
               ? `<div class="night-flag day" style="margin-top:4px;">✅ Night currency — ${nightLandingsCount} landings in 90 days</div>`
@@ -2551,7 +2551,7 @@
           }
           return html;
         }
-        return `<div class="night-flag day" style="margin-top:8px;">☀️ Day ${label.toLowerCase()}</div>`;
+        return `<div class="night-flag day" style="margin-top:8px;">DAY ${label.toUpperCase()}</div>`;
       };
 
       const depNight = nightFlagHtml(leg.depTimeUtc, ss, 'Departure');
@@ -2632,7 +2632,7 @@
         const distDesc = t.nearEnd === 'en route'
           ? `${t.distNm}nm from route`
           : `${t.distNm}nm from ${t.nearEnd}`;
-        html += `<div class="route-advisory warn">⛰ ${t.name} — ${distDesc}
+        html += `<div class="route-advisory warn">▲ ${t.name} — ${distDesc}
           <div class="advisory-note">${t.note}</div>
         </div>`;
       }
@@ -2642,7 +2642,7 @@
     // ── Convective SIGMETs ──
     if (ri.convectiveSigmets && ri.convectiveSigmets.length > 0) {
       html += `<div class="route-section">
-        <div class="route-section-label">⛈ Convective SIGMETs (${ri.convectiveSigmets.length} active — hard no-go VFR)</div>`;
+        <div class="route-section-label">CONVECTIVE SIGMETs (${ri.convectiveSigmets.length} active — hard no-go VFR)</div>`;
       for (const s of ri.convectiveSigmets) {
         const altStr = (s.base !== null && s.top !== null) ? ` · ${s.base}–${s.top}ft` : '';
         html += `<div class="route-advisory nogo">❌ ${s.hazard || 'CONVECTIVE SIGMET'}${altStr}${s.validTo ? ' — valid to ' + formatUtcForDisplay(s.validTo) : ''}</div>`;
@@ -3249,14 +3249,14 @@
           ri.terrain.forEach(t => {
             const distDesc = t.nearEnd === 'en route'
               ? `${t.distNm}nm from route` : `${t.distNm}nm from ${t.nearEnd}`;
-            lines.push(`  ⛰ ${t.name} — ${distDesc}`);
+            lines.push(`  ▲ ${t.name} — ${distDesc}`);
             lines.push(`     ${t.note}`);
           });
         }
 
         // Convective SIGMETs
         if (ri.convectiveSigmets && ri.convectiveSigmets.length > 0) {
-          lines.push(`⛈ CONVECTIVE SIGMETs (${ri.convectiveSigmets.length} — hard no-go VFR):`);
+          lines.push(`CONVECTIVE SIGMETs (${ri.convectiveSigmets.length} — hard no-go VFR):`);
           ri.convectiveSigmets.forEach(s => {
             const alt = (s.base !== null && s.top !== null) ? ` ${s.base}–${s.top}ft` : '';
             lines.push(`  ❌ ${s.hazard}${alt}${s.validTo ? ' valid to ' + formatUtcForDisplay(s.validTo) : ''}`);
