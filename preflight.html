@@ -3484,11 +3484,11 @@
     lines.push('');
 
     const routeSlug  = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
-    const flightDate = document.getElementById('flightDate')?.value || new Date().toISOString().slice(0, 10);
+    const dateSlug   = flightDate !== '—' ? flightDate : new Date().toISOString().slice(0, 10);
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const a    = document.createElement('a');
     a.href     = URL.createObjectURL(blob);
-    a.download = `CA-Preflight-${routeSlug}-${flightDate}.txt`;
+    a.download = `CA-Preflight-${routeSlug}-${dateSlug}.txt`;
     a.click();
   }
 
