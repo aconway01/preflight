@@ -2313,6 +2313,28 @@
       </div>`;
     }
 
+    // ── SFRAs / Prohibited Areas ──
+    if (ri.sfras && ri.sfras.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">Special Use Airspace — Proximity Alert</div>`;
+      for (const s of ri.sfras) {
+        const cls      = s.severity === 'nogo' ? 'nogo' : 'warn';
+        const icon     = s.severity === 'nogo' ? '❌' : '⚠';
+        const distDesc = s.nearEnd === 'en route'
+          ? `${s.distNm}nm from route`
+          : `${s.distNm}nm from ${s.nearEnd}`;
+        html += `<div class="route-advisory ${cls}">${icon} ${s.name} — ${distDesc}
+          <div style="font-size:10px;margin-top:3px;opacity:0.85;">${s.note}</div>
+        </div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<div class="route-section">
+        <div class="route-section-label">Special Use Airspace</div>
+        <div class="route-advisory pass">✅ No permanent SFRAs within warning range of route</div>
+      </div>`;
+    }
+
     // ── G-AIRMETs ──
     if (ri.gairmets && ri.gairmets.length > 0) {
       html += `<div class="route-section">
@@ -2351,7 +2373,7 @@
     // ── PIREPs ──
     if (ri.pireps && ri.pireps.length > 0) {
       html += `<div class="route-section">
-        <div class="route-section-label">PIREPs — ${ri.pireps.length} within 100nm</div>`;
+        <div class="route-section-label">PIREPs — ${ri.pireps.length} near route</div>`;
       for (const p of ri.pireps) {
         const altStr  = p.altitude ? ` · ${p.altitude.toLocaleString()}ft` : '';
         const icgStr  = p.icing     ? ` · ICE: ${p.icing}`     : '';
@@ -2364,7 +2386,7 @@
     } else {
       html += `<div class="route-section">
         <div class="route-section-label">PIREPs</div>
-        <div class="route-advisory info">No PIREPs reported within 100nm.</div>
+        <div class="route-advisory info">No PIREPs reported near route.</div>
       </div>`;
     }
 
@@ -2829,6 +2851,21 @@
           lines.push(`Sunset:  ${ssLocal} ${tzAbbr(tz)} · ${ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)  : '—'}`);
         }
 
+        // SFRAs
+        if (ri.sfras && ri.sfras.length > 0) {
+          lines.push(`Special Use Airspace Alerts (${ri.sfras.length}):`);
+          ri.sfras.forEach(s => {
+            const icon     = s.severity === 'nogo' ? '❌' : '⚠';
+            const distDesc = s.nearEnd === 'en route'
+              ? `${s.distNm}nm from route`
+              : `${s.distNm}nm from ${s.nearEnd}`;
+            lines.push(`  ${icon} ${s.name} — ${distDesc}`);
+            lines.push(`     ${s.note}`);
+          });
+        } else {
+          lines.push('Special Use Airspace: No permanent SFRAs within warning range');
+        }
+
         // G-AIRMETs
         if (ri.gairmets && ri.gairmets.length > 0) {
           lines.push(`G-AIRMETs (${ri.gairmets.length} active):`);
@@ -2854,7 +2891,7 @@
 
         // PIREPs
         if (ri.pireps && ri.pireps.length > 0) {
-          lines.push(`PIREPs (${ri.pireps.length} within 100nm):`);
+          lines.push(`PIREPs (${ri.pireps.length} near route):`);
           ri.pireps.forEach(p => {
             const alt  = p.altitude ? ` ${p.altitude.toLocaleString()}ft` : '';
             const ice  = p.icing      ? ` ICE:${p.icing}`      : '';
@@ -2863,7 +2900,7 @@
             if (p.rawText) lines.push(`     ${p.rawText}`);
           });
         } else {
-          lines.push('PIREPs: None within 100nm');
+          lines.push('PIREPs: None reported near route');
         }
 
         lines.push('');
