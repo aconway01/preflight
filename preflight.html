@@ -452,7 +452,7 @@
 
     .leg-row-bottom {
       display: grid;
-      grid-template-columns: 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr 120px auto;
       gap: 10px; align-items: end;
       padding-top: 10px;
       border-top: 1px solid rgba(200,164,77,0.08);
@@ -683,6 +683,65 @@
     .leg-rec-go      { background: rgba(22,163,74,0.15);  color: #4ADE80; border: 1px solid rgba(22,163,74,0.3); }
     .leg-rec-caution { background: rgba(217,119,6,0.15);  color: #FCD34D; border: 1px solid rgba(217,119,6,0.3); }
     .leg-rec-nogo    { background: rgba(220,38,38,0.15);  color: #F87171; border: 1px solid rgba(220,38,38,0.3); }
+
+    /* ── ROUTE INTELLIGENCE PANEL ── */
+    .route-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .route-panel-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .route-panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .route-section {
+      margin-bottom: 16px; padding-bottom: 16px;
+      border-bottom: 1px solid rgba(200,164,77,0.08);
+    }
+    .route-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .route-section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 8px;
+    }
+    .route-advisory {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px; line-height: 1.5;
+      padding: 6px 10px; margin-bottom: 4px;
+      border-radius: 4px; border-left: 3px solid;
+    }
+    .route-advisory.warn  { background: rgba(217,119,6,0.1);    border-color: var(--amber); color: var(--white); }
+    .route-advisory.nogo  { background: rgba(220,38,38,0.1);    border-color: var(--red);   color: var(--white); }
+    .route-advisory.info  { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.3); color: var(--slate-light); }
+    .route-advisory.pass  { background: rgba(22,163,74,0.08);   border-color: var(--green); color: var(--white); }
+    .winds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+    .wind-level {
+      background: var(--navy); border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 4px; padding: 8px 12px;
+    }
+    .wind-level-alt {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      letter-spacing: 1px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px;
+    }
+    .wind-level-val { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 600; color: var(--white); }
+    .wind-level-temp { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--slate); margin-top: 2px; }
+    .sun-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+    .sun-item { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--white); }
+    .sun-item span { color: var(--slate); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .night-flag {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      padding: 4px 10px; border-radius: 3px; display: inline-block;
+    }
+    .night-flag.night    { background: rgba(99,102,241,0.2);  color: #A5B4FC; border: 1px solid rgba(99,102,241,0.3); }
+    .night-flag.day      { background: rgba(22,163,74,0.1);   color: #4ADE80; border: 1px solid rgba(22,163,74,0.2); }
+    .night-flag.currency { background: rgba(220,38,38,0.1);   color: #F87171; border: 1px solid rgba(220,38,38,0.2); }
+    .pirep-raw { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--slate); margin-top: 2px; }
 
     .reports-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 
@@ -941,7 +1000,7 @@
         margin-bottom: 10px;
       }
       .leg-arrow { display: none; }
-      .leg-row-bottom { grid-template-columns: 1fr auto; }
+      .leg-row-bottom { grid-template-columns: 1fr 1fr; }
       .leg-row-bottom .leg-field:first-child { grid-column: 1 / -1; }
       .leg-row-bottom .leg-field { min-width: 0; overflow: hidden; }
       .leg-field input[type="datetime-local"] { min-width: 0; width: 100%; }
@@ -1026,7 +1085,26 @@
       .card-role { color: #666 !important; opacity: 1; }
       .analysis-section-label { color: #555 !important; opacity: 1; }
       .raw-section { border-top: 1px solid #ddd; }
-      /* ── Flight Info & Currency ── */
+      /* ── Route Panel ── */
+      .route-panel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      .route-panel-title { color: #333 !important; opacity: 1; }
+      .route-section { border-bottom-color: #ddd; }
+      .route-section-label { color: #555 !important; }
+      .route-advisory { border-left-width: 2px; }
+      .route-advisory.warn  { background: #fef3c7 !important; color: #92400e !important; border-color: #D97706 !important; }
+      .route-advisory.nogo  { background: #fee2e2 !important; color: #991b1b !important; border-color: #DC2626 !important; }
+      .route-advisory.pass  { background: #d1fae5 !important; color: #166534 !important; border-color: #16A34A !important; }
+      .route-advisory.info  { background: #f1f5f9 !important; color: #444    !important; border-color: #94A3B8 !important; }
+      .wind-level { background: #f5f5f5 !important; border-color: #ddd !important; }
+      .wind-level-alt { color: #555 !important; }
+      .wind-level-val { color: #111 !important; }
+      .wind-level-temp { color: #555 !important; }
+      .sun-item { color: #111 !important; }
+      .sun-item span { color: #555 !important; }
+      .night-flag.night    { background: #ede9fe !important; color: #5b21b6 !important; }
+      .night-flag.day      { background: #d1fae5 !important; color: #166534 !important; }
+      .night-flag.currency { background: #fee2e2 !important; color: #991b1b !important; }
+      .pirep-raw { color: #666 !important; }
       #flightInfoPanel, #currencyPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
       #flightInfoPanelBody, #currencyPanelBody { display: block !important; }
       .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
@@ -1822,6 +1900,11 @@
                  oninput="recalculateDepTimes()"
                  onblur="normaliseFlightTime(this)">
         </div>
+        <div class="leg-field">
+          <label>Cruise Alt (ft)</label>
+          <input type="number" class="cruise-alt-input" placeholder="4500"
+                 min="500" max="17500" step="500" autocomplete="off">
+        </div>
         <div style="padding-bottom:10px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--slate); opacity:0.5; align-self:flex-end;">
           arrival time<br>auto-calculated
         </div>
@@ -1899,6 +1982,8 @@
     const flightRulesMode = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
     // Backend only knows VFR/IFR — Solo uses VFR weather analysis with stricter minimums
     const flightRules     = flightRulesMode === 'IFR' ? 'IFR' : 'VFR';
+    // Capture night landings count now for night currency check in route panel
+    const nightLandingsCount = parseInt(document.getElementById('nightLandings')?.value || '0');
     const legs            = [];
     let   hasError    = false;
 
@@ -1916,10 +2001,12 @@
         return;
       }
 
-      const depTimeLocal  = row.querySelector('.dep-time-input').value;
-      const flightTimeVal = row.querySelector('.flight-time-input').value;
-      const totalMin      = parseFlightTime(flightTimeVal);
-      const depTimeUtc    = localToUtcIso(depTimeLocal, tz);
+      const depTimeLocal   = row.querySelector('.dep-time-input').value;
+      const flightTimeVal  = row.querySelector('.flight-time-input').value;
+      const cruiseAltVal   = row.querySelector('.cruise-alt-input').value;
+      const totalMin       = parseFlightTime(flightTimeVal);
+      const cruiseAltFt    = cruiseAltVal ? parseInt(cruiseAltVal) : null;
+      const depTimeUtc     = localToUtcIso(depTimeLocal, tz);
 
       // Block if flight time is present but invalid
       if (flightTimeVal.trim() && isNaN(totalMin)) {
@@ -1947,6 +2034,7 @@
         depTimeUtc:   depTimeUtc,
         depTimeLocal: depTimeLocal,
         flightMin:    totalMin > 0 ? totalMin : null,
+        cruiseAltFt,
       });
     }
 
@@ -1962,28 +2050,30 @@
     document.getElementById('actionsBar').classList.remove('visible');
 
     try {
-      const legsParam       = legs.map(l => `${l.departure},${l.arrival}`).join('|');
-      const depTimesParam   = legs.map(l => l.depTimeUtc).join('|');
-      const flightTimesParam = legs.map(l => l.flightMin !== null ? l.flightMin : '').join('|');
+      const legsParam          = legs.map(l => `${l.departure},${l.arrival}`).join('|');
+      const depTimesParam      = legs.map(l => l.depTimeUtc).join('|');
+      const flightTimesParam   = legs.map(l => l.flightMin !== null ? l.flightMin : '').join('|');
+      const cruiseAltsParam    = legs.map(l => l.cruiseAltFt !== null ? l.cruiseAltFt : '').join('|');
 
       const params = new URLSearchParams({
-        legs:           legsParam,
-        departureTimes: depTimesParam,
-        flightTimes:    flightTimesParam,
-        flightRules:    flightRules,
-        minVis:         mins.minVis,
-        minCeil:        mins.minCeil,
-        maxXwd:         mins.maxXwd,
-        maxGust:        mins.maxGust,
-        cautionDA:      mins.cautionDA,
-        noGoDA:         mins.noGoDA,
+        legs:             legsParam,
+        departureTimes:   depTimesParam,
+        flightTimes:      flightTimesParam,
+        cruiseAltitudes:  cruiseAltsParam,
+        flightRules:      flightRules,
+        minVis:           mins.minVis,
+        minCeil:          mins.minCeil,
+        maxXwd:           mins.maxXwd,
+        maxGust:          mins.maxGust,
+        cautionDA:        mins.cautionDA,
+        noGoDA:           mins.noGoDA,
       });
 
       const res  = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
       const data = await res.json();
 
       if (data.error) { showError(`API Error: ${data.error}`); return; }
-      renderResults(data, legs, tz, flightRules, flightRulesMode);
+      renderResults(data, legs, tz, flightRules, flightRulesMode, nightLandingsCount);
 
     } catch(e) {
       showError(`Request failed. Check your connection or try again. (${e.message})`);
@@ -1994,7 +2084,7 @@
   }
 
   // ── RENDER ──
-  function renderResults(data, legs, tz, flightRules, flightRulesMode) {
+  function renderResults(data, legs, tz, flightRules, flightRulesMode, nightLandingsCount) {
     const legReports = document.getElementById('legReports');
     const verdict    = document.getElementById('tripVerdict');
     legReports.innerHTML = '';
@@ -2030,6 +2120,12 @@
         <div class="reports-grid" id="legGrid${i}"></div>
       `;
       legReports.appendChild(section);
+
+      // Insert route intelligence panel before station cards if data available
+      if (leg.routeIntelligence && !leg.routeIntelligence.error) {
+        const routeEl = buildRoutePanel(leg.routeIntelligence, legs[i], tz, nightLandingsCount);
+        if (routeEl) section.insertBefore(routeEl, section.querySelector('.reports-grid'));
+      }
 
       const grid = document.getElementById(`legGrid${i}`);
       leg.reports.forEach((r, j) => {
@@ -2097,6 +2193,152 @@
   }
 
   // ── CARD BUILDER ──
+  // ── ROUTE INTELLIGENCE PANEL ──
+  function buildRoutePanel(ri, leg, tz, nightLandingsCount) {
+    const el = document.createElement('div');
+    el.className = 'route-panel';
+
+    let html = `<div class="route-panel-title">Route Intelligence — ${leg.departure} → ${leg.arrival}</div>`;
+
+    // ── Hemispheric Rule ──
+    if (ri.hemispheric) {
+      const h   = ri.hemispheric;
+      const cls = h.pass ? 'pass' : 'warn';
+      html += `<div class="route-section">
+        <div class="route-section-label">Cruise Altitude · ${ri.cruiseAlt ? ri.cruiseAlt.toLocaleString() + 'ft' : '—'}</div>
+        <div class="route-advisory ${cls}">${h.note}</div>
+      </div>`;
+    } else if (ri.cruiseAlt) {
+      html += `<div class="route-section">
+        <div class="route-section-label">Cruise Altitude · ${ri.cruiseAlt.toLocaleString()}ft</div>
+        <div class="route-advisory info">Course data unavailable — verify hemispheric rule manually.</div>
+      </div>`;
+    }
+
+    // ── Winds Aloft ──
+    if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">Winds Aloft · Nearest Station: ${ri.windsAloft.station || '—'}</div>
+        <div class="winds-grid">`;
+      for (const lvl of ri.windsAloft.levels) {
+        const isCruise = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500;
+        const border   = isCruise ? 'border-color: var(--gold);' : '';
+        if (lvl.calm) {
+          html += `<div class="wind-level" style="${border}">
+            <div class="wind-level-alt">${(lvl.altitudeFt / 1000).toFixed(0)}k ft${isCruise ? ' ★' : ''}</div>
+            <div class="wind-level-val">Calm / Light</div>
+          </div>`;
+        } else if (lvl.windDir !== null && lvl.windSpeed !== null) {
+          html += `<div class="wind-level" style="${border}">
+            <div class="wind-level-alt">${(lvl.altitudeFt / 1000).toFixed(0)}k ft${isCruise ? ' ★' : ''}</div>
+            <div class="wind-level-val">${String(lvl.windDir).padStart(3,'0')}° @ ${lvl.windSpeed}kts</div>
+            ${lvl.tempC !== null ? `<div class="wind-level-temp">${lvl.tempC}°C</div>` : ''}
+          </div>`;
+        }
+      }
+      html += `</div></div>`;
+    } else if (ri.cruiseAlt) {
+      html += `<div class="route-section">
+        <div class="route-section-label">Winds Aloft</div>
+        <div class="route-advisory info">Winds aloft data unavailable for this location.</div>
+      </div>`;
+    }
+
+    // ── Sunrise / Sunset ──
+    if (ri.sunriseSunset) {
+      const ss = ri.sunriseSunset;
+      const sunriseLocal = ss.sunriseUtc ? formatLocalForDisplay(ss.sunriseUtc, tz) : '—';
+      const sunsetLocal  = ss.sunsetUtc  ? formatLocalForDisplay(ss.sunsetUtc,  tz) : '—';
+      const sunriseUtc   = ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc)        : '—';
+      const sunsetUtc    = ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)         : '—';
+
+      // Night flight check
+      let nightHtml = '';
+      if (leg.depTimeUtc && ss.sunriseUtc && ss.sunsetUtc) {
+        const dep     = new Date(leg.depTimeUtc);
+        const sunrise = new Date(ss.sunriseUtc);
+        const sunset  = new Date(ss.sunsetUtc);
+        const isNight = dep < sunrise || dep > sunset;
+        if (isNight) {
+          const currency = !isNaN(nightLandingsCount) && nightLandingsCount >= 3;
+          nightHtml += `<div class="night-flag night" style="margin-top:8px;">🌙 Night departure</div>`;
+          nightHtml += currency
+            ? `<div class="night-flag day" style="margin-top:4px;">✅ Night currency — ${nightLandingsCount} landings in 90 days</div>`
+            : `<div class="night-flag currency" style="margin-top:4px;">⚠ Night currency — verify 3 full-stop night landings in 90 days (FAR 61.57b)</div>`;
+        } else {
+          nightHtml = `<div class="night-flag day" style="margin-top:8px;">☀️ Day departure</div>`;
+        }
+      }
+
+      html += `<div class="route-section">
+        <div class="route-section-label">Sunrise / Sunset · ${ss.date}</div>
+        <div class="sun-row">
+          <div class="sun-item"><span>Sunrise</span>${sunriseLocal} ${tzAbbr(tz)} · ${sunriseUtc}</div>
+          <div class="sun-item"><span>Sunset</span>${sunsetLocal} ${tzAbbr(tz)} · ${sunsetUtc}</div>
+        </div>
+        ${nightHtml}
+      </div>`;
+    }
+
+    // ── G-AIRMETs ──
+    if (ri.gairmets && ri.gairmets.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">G-AIRMETs (${ri.gairmets.length} active near route)</div>`;
+      for (const a of ri.gairmets) {
+        const severity = a.hazard || 'ADVISORY';
+        const altStr   = (a.base !== null && a.top !== null)
+          ? ` · ${a.base}–${a.top}ft` : '';
+        html += `<div class="route-advisory warn">⚠ ${severity}${altStr}${a.validTo ? ' — valid to ' + formatUtcForDisplay(a.validTo) : ''}</div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<div class="route-section">
+        <div class="route-section-label">G-AIRMETs</div>
+        <div class="route-advisory pass">✅ No active G-AIRMETs near route</div>
+      </div>`;
+    }
+
+    // ── SIGMETs ──
+    if (ri.sigmets && ri.sigmets.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">SIGMETs (${ri.sigmets.length} active near route)</div>`;
+      for (const s of ri.sigmets) {
+        const altStr = (s.base !== null && s.top !== null) ? ` · ${s.base}–${s.top}ft` : '';
+        html += `<div class="route-advisory nogo">❌ ${s.hazard || 'SIGMET'}${altStr}${s.validTo ? ' — valid to ' + formatUtcForDisplay(s.validTo) : ''}</div>`;
+        if (s.rawText) html += `<div class="pirep-raw">${s.rawText}</div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<div class="route-section">
+        <div class="route-section-label">SIGMETs</div>
+        <div class="route-advisory pass">✅ No active SIGMETs near route</div>
+      </div>`;
+    }
+
+    // ── PIREPs ──
+    if (ri.pireps && ri.pireps.length > 0) {
+      html += `<div class="route-section">
+        <div class="route-section-label">PIREPs — ${ri.pireps.length} within 100nm</div>`;
+      for (const p of ri.pireps) {
+        const altStr  = p.altitude ? ` · ${p.altitude.toLocaleString()}ft` : '';
+        const icgStr  = p.icing     ? ` · ICE: ${p.icing}`     : '';
+        const turbStr = p.turbulence ? ` · TURB: ${p.turbulence}` : '';
+        const cls     = (p.icing && p.icing !== 'NEG') || (p.turbulence && p.turbulence !== 'NEG') ? 'warn' : 'info';
+        html += `<div class="route-advisory ${cls}">${p.aircraft || 'PIREP'}${altStr}${icgStr}${turbStr}</div>`;
+        if (p.rawText) html += `<div class="pirep-raw">${p.rawText}</div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<div class="route-section">
+        <div class="route-section-label">PIREPs</div>
+        <div class="route-advisory info">No PIREPs reported within 100nm.</div>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+    return el;
+  }
+
   function buildCard(r, role, leg, tz, flightRules) {
     const card = document.createElement('div');
     card.className = 'station-card';
@@ -2515,8 +2757,84 @@
         lines.push(`DEP: ${formatLocalForDisplay(leg.departureTime, tz)} ${tzAbbr(tz)}  ` +
                    `ARR: ${formatLocalForDisplay(leg.arrivalTime, tz)} ${tzAbbr(tz)}  (${l.flightMin} min)`);
       }
+      if (l.cruiseAltFt) lines.push(`Cruise Altitude: ${l.cruiseAltFt.toLocaleString()}ft`);
       lines.push(`Leg Recommendation: ${deriveTripRec(leg.reports.map(r => r.recommendation))}`);
       lines.push('═'.repeat(50));
+
+      // ── Route Intelligence ──
+      const ri = leg.routeIntelligence;
+      if (ri && !ri.error) {
+        lines.push('');
+        lines.push('ROUTE INTELLIGENCE');
+        lines.push('-'.repeat(50));
+
+        // Hemispheric rule
+        if (ri.hemispheric) {
+          lines.push(`Hemispheric Rule:  ${ri.hemispheric.note}`);
+        }
+
+        // Winds aloft
+        if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
+          lines.push(`Winds Aloft (${ri.windsAloft.station || '?'}):`);
+          for (const lvl of ri.windsAloft.levels) {
+            const star = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500 ? ' ★' : '';
+            if (lvl.calm) {
+              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft${star}: Calm / Light`);
+            } else if (lvl.windDir !== null) {
+              const tempStr = lvl.tempC !== null ? `  ${lvl.tempC}°C` : '';
+              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft${star}: ${String(lvl.windDir).padStart(3,'0')}° @ ${lvl.windSpeed}kts${tempStr}`);
+            }
+          }
+        }
+
+        // Sunrise/sunset
+        if (ri.sunriseSunset) {
+          const ss = ri.sunriseSunset;
+          const srLocal = ss.sunriseUtc ? formatLocalForDisplay(ss.sunriseUtc, tz) : '—';
+          const ssLocal = ss.sunsetUtc  ? formatLocalForDisplay(ss.sunsetUtc,  tz) : '—';
+          lines.push(`Sunrise: ${srLocal} ${tzAbbr(tz)} · ${ss.sunriseUtc ? formatUtcForDisplay(ss.sunriseUtc) : '—'}`);
+          lines.push(`Sunset:  ${ssLocal} ${tzAbbr(tz)} · ${ss.sunsetUtc  ? formatUtcForDisplay(ss.sunsetUtc)  : '—'}`);
+        }
+
+        // G-AIRMETs
+        if (ri.gairmets && ri.gairmets.length > 0) {
+          lines.push(`G-AIRMETs (${ri.gairmets.length} active):`);
+          ri.gairmets.forEach(a => {
+            const alt = (a.base !== null && a.top !== null) ? ` ${a.base}–${a.top}ft` : '';
+            lines.push(`  ⚠ ${a.hazard}${alt}${a.validTo ? ' valid to ' + formatUtcForDisplay(a.validTo) : ''}`);
+          });
+        } else {
+          lines.push('G-AIRMETs: None active near route');
+        }
+
+        // SIGMETs
+        if (ri.sigmets && ri.sigmets.length > 0) {
+          lines.push(`SIGMETs (${ri.sigmets.length} active):`);
+          ri.sigmets.forEach(s => {
+            const alt = (s.base !== null && s.top !== null) ? ` ${s.base}–${s.top}ft` : '';
+            lines.push(`  ❌ ${s.hazard}${alt}${s.validTo ? ' valid to ' + formatUtcForDisplay(s.validTo) : ''}`);
+            if (s.rawText) lines.push(`     ${s.rawText}`);
+          });
+        } else {
+          lines.push('SIGMETs: None active near route');
+        }
+
+        // PIREPs
+        if (ri.pireps && ri.pireps.length > 0) {
+          lines.push(`PIREPs (${ri.pireps.length} within 100nm):`);
+          ri.pireps.forEach(p => {
+            const alt  = p.altitude ? ` ${p.altitude.toLocaleString()}ft` : '';
+            const ice  = p.icing      ? ` ICE:${p.icing}`      : '';
+            const turb = p.turbulence ? ` TURB:${p.turbulence}` : '';
+            lines.push(`  ${p.aircraft || 'PIREP'}${alt}${ice}${turb}`);
+            if (p.rawText) lines.push(`     ${p.rawText}`);
+          });
+        } else {
+          lines.push('PIREPs: None within 100nm');
+        }
+
+        lines.push('');
+      }
 
       leg.reports.forEach((r, j) => {
         const role = j === 0 ? 'Departure' : j === 1 ? 'Arrival' : `Stop ${j + 1}`;
