@@ -439,6 +439,9 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
     }
+    @media (max-width: 480px) {
+      .mins-readonly-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     .mins-readonly-cell {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(148,163,184,0.1);
@@ -1880,7 +1883,8 @@
         <button class="mins-mode-btn active" data-mode="vfr_day">VFR Day</button>
         <button class="mins-mode-btn"        data-mode="vfr_night">VFR Night</button>
         <button class="mins-mode-btn"        data-mode="ifr">IFR</button>
-        <button class="mins-mode-btn"        data-mode="solo">Student Solo</button>
+        <button class="mins-mode-btn"        data-mode="solo_day">Solo Day</button>
+        <button class="mins-mode-btn"        data-mode="solo_night">Solo Night</button>
       </div>
 
       <!-- FAA Minimums — read-only reference -->
@@ -2264,7 +2268,7 @@
       if (soloNote) {
         soloNote.style.display = isSolo ? 'block' : 'none';
         soloNote.textContent   = isSolo
-          ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors.'
+          ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors. Night solo requires a separate FAR 61.93 endorsement.'
           : '';
       }
     });
@@ -2378,17 +2382,17 @@
     const isSolo = flightRulesVal === 'SOLO';
     const isVFR  = !isIFR && !isSolo;
 
-    // VFR → Day + Night, IFR → IFR only, Solo → Solo only
+    // VFR → Day + Night, IFR → IFR only, Solo → Solo Day + Solo Night
     document.querySelectorAll('.mins-mode-btn').forEach(btn => {
       const m = btn.dataset.mode;
-      const visible = (isVFR  && (m === 'vfr_day' || m === 'vfr_night')) ||
-                      (isIFR  && m === 'ifr') ||
-                      (isSolo && m === 'solo');
+      const visible = (isVFR  && (m === 'vfr_day'   || m === 'vfr_night')) ||
+                      (isIFR  &&  m === 'ifr') ||
+                      (isSolo && (m === 'solo_day'   || m === 'solo_night'));
       btn.style.display = visible ? '' : 'none';
     });
 
     // Always snap to the primary tab for the selected flight rules
-    const primaryMode = isIFR ? 'ifr' : isSolo ? 'solo' : 'vfr_day';
+    const primaryMode = isIFR ? 'ifr' : isSolo ? 'solo_day' : 'vfr_day';
     setMinimumsMode(primaryMode);
   }
 
@@ -2527,7 +2531,7 @@
   function saveMinimums() {
     // Snapshot current DOM values for ALL modes by reading inputs when visible,
     // and _personalMins for modes not currently displayed
-    const modes = ['vfr_day', 'vfr_night', 'ifr', 'solo'];
+    const modes = ['vfr_day', 'vfr_night', 'ifr', 'solo_day', 'solo_night'];
     modes.forEach(mode => {
       const floor = resolveInstructorFloor(mode, null, null);
       const defs  = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
@@ -2577,12 +2581,36 @@
     renderMinimumsPanel(mode);
     updateMinsStatus();
   }
+  // Returns minimums for a specific mode regardless of active panel tab
+  function getMinimumsByMode(mode) {
+    const floor = resolveInstructorFloor(mode, null, null);
+    const saved = _savedMins[mode] || {};
+    const defs  = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+    const result = { isIFR: mode === 'ifr', isSolo: mode === 'solo_day' || mode === 'solo_night' };
+    MINIMUMS_FIELDS.forEach(f => {
+      if (!f.modes.includes(mode)) return;
+      const floorVal = floor[f.key];
+      let val = saved[f.key] ?? defs[f.key] ?? floorVal;
+      if (floorVal !== null && val !== null) {
+        val = f.direction === 'min' ? Math.max(val, floorVal) : Math.min(val, floorVal);
+      }
+      result[f.key] = val;
+    });
+    result.minVisibilitySM    = result.minVis;
+    result.minCeilingFt       = result.minCeil;
+    result.maxCrosswindKts    = result.maxXwd;
+    result.maxGustKts         = result.maxGust;
+    result.cautionDensityAlt  = result.cautionDA;
+    result.noGoDensityAlt     = result.noGoDA;
+    return result;
+  }
+
   function getMinimums() {
     const mode  = getMinimumsMode();
     const floor = resolveInstructorFloor(mode, null, null);
     const saved = _savedMins[mode] || {};
     const defs  = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
-    const result = { isIFR: mode === 'ifr', isSolo: mode === 'solo' };
+    const result = { isIFR: mode === 'ifr', isSolo: mode === 'solo_day' || mode === 'solo_night' };
 
     MINIMUMS_FIELDS.forEach(f => {
       // Priority: saved → DOM input → default → floor
@@ -3007,20 +3035,39 @@
       const flightTimesParam   = legs.map(l => l.flightMin !== null ? l.flightMin : '').join('|');
       const cruiseAltsParam    = legs.map(l => l.cruiseAltFt !== null ? l.cruiseAltFt : '').join('|');
 
+      // For VFR and Solo flights send both day and night minimums so Code.gs can
+      // apply the correct set per station based on sunrise/sunset
+      const minsDay   = flightRules === 'IFR' ? mins
+                      : flightRules === 'SOLO' ? getMinimumsByMode('solo_day')
+                      : getMinimumsByMode('vfr_day');
+      const minsNight = flightRules === 'IFR' ? mins
+                      : flightRules === 'SOLO' ? getMinimumsByMode('solo_night')
+                      : getMinimumsByMode('vfr_night');
+
       const params = new URLSearchParams({
         legs:             legsParam,
         departureTimes:   depTimesParam,
         flightTimes:      flightTimesParam,
         cruiseAltitudes:  cruiseAltsParam,
         flightRules:      flightRules,
-        minVis:           mins.minVis,
-        minCeil:          mins.minCeil,
-        maxXwd:           mins.maxXwd,
-        maxGust:          mins.maxGust,
-        cautionDA:        mins.cautionDA,
-        noGoDA:           mins.noGoDA,
-        maxTotalWind:     mins.maxTotalWind  ?? '',
-        maxPressureAlt:   mins.maxPressureAlt ?? '',
+        // Primary (day) minimums
+        minVis:           minsDay.minVis,
+        minCeil:          minsDay.minCeil,
+        maxXwd:           minsDay.maxXwd,
+        maxGust:          minsDay.maxGust,
+        cautionDA:        minsDay.cautionDA,
+        noGoDA:           minsDay.noGoDA,
+        maxTotalWind:     minsDay.maxTotalWind  ?? '',
+        maxPressureAlt:   minsDay.maxPressureAlt ?? '',
+        // Night minimums (VFR only — used when station is after sunset)
+        nightMinVis:      minsNight.minVis      ?? '',
+        nightMinCeil:     minsNight.minCeil     ?? '',
+        nightMaxXwd:      minsNight.maxXwd      ?? '',
+        nightMaxGust:     minsNight.maxGust     ?? '',
+        nightCautionDA:   minsNight.cautionDA   ?? '',
+        nightNoGoDA:      minsNight.noGoDA      ?? '',
+        nightMaxTotalWind: minsNight.maxTotalWind ?? '',
+        nightMaxPressureAlt: minsNight.maxPressureAlt ?? '',
       });
 
       const res  = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
@@ -3096,7 +3143,8 @@
 
     // Auto-switch minimums panel to VFR Night if departure is at night
     // Only auto-switch if currently on VFR Day — don't override IFR or Solo
-    if (_currentMinimumsMode === 'vfr_day' && flightRules !== 'IFR' && flightRules !== 'SOLO') {
+    if ((_currentMinimumsMode === 'vfr_day' || _currentMinimumsMode === 'solo_day') &&
+        flightRules !== 'IFR') {
       const anyNight = data.legs?.some(leg => {
         const ss = leg.routeIntelligence?.sunriseSunset;
         if (!ss?.sunriseUtc || !ss?.sunsetUtc || !leg.depTimeUtc) return false;
@@ -3106,8 +3154,9 @@
         return t < sunrise || t > sunset;
       });
       if (anyNight) {
-        updateMinimumsTabs('VFR');
-        setMinimumsMode('vfr_night');
+        const nightMode = flightRules === 'SOLO' ? 'solo_night' : 'vfr_night';
+        updateMinimumsTabs(flightRules);
+        setMinimumsMode(nightMode);
       }
     }
   }
@@ -3421,8 +3470,9 @@
           </div>
           <div class="card-summary-right">
             <div class="flight-cat ${catClass}">${depA.flightCategory || '—'}</div>
-            ${flightRules === 'IFR'  ? '<div class="flight-cat cat-ifr"  style="font-size:10px;padding:2px 8px;">IFR</div>'  : ''}
-            ${flightRules === 'SOLO' ? '<div class="flight-cat cat-mvfr" style="font-size:10px;padding:2px 8px;">SOLO</div>' : ''}
+            ${flightRules === 'IFR'           ? '<div class="flight-cat cat-ifr"  style="font-size:10px;padding:2px 8px;">IFR</div>'   : ''}
+            ${flightRules === 'SOLO'          ? '<div class="flight-cat cat-mvfr" style="font-size:10px;padding:2px 8px;">SOLO</div>'  : ''}
+            ${depA.isNight && flightRules !== 'IFR' ? '<div class="flight-cat" style="font-size:9px;padding:2px 8px;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);">NIGHT</div>' : ''}
             <div class="card-rec ${recCls}">${r.recommendation}${noGoSource}</div>
           </div>
         </div>
@@ -3502,6 +3552,9 @@
         : '';
 
       const recBadge = `<div class="card-rec ${recClsA}" style="font-size:9px;letter-spacing:0.5px;display:inline-block;margin-bottom:10px;">${a.recommendation}</div>`;
+      const nightBadge = (a.isNight && !a.isIFR)
+        ? `<div style="display:inline-block;margin-left:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);border-radius:3px;margin-bottom:10px;">NIGHT MINIMUMS</div>`
+        : '';
 
       // Stale METAR warning — shown when METAR is older than 90 minutes
       let staleMetarHtml = '';
@@ -3538,7 +3591,7 @@
             <span class="time-tag">${timeDisplay}</span>
           </div>
           ${periodLabelHtml}
-          ${recBadge}
+          ${recBadge}${nightBadge}
           ${staleMetarHtml}
           <div class="concerns-block" style="margin-bottom:12px;">
             <div class="block-title">Concerns</div>
@@ -3711,7 +3764,9 @@
     });
     lines.push(`Flight Date:  ${flightDate}`);
     lines.push(`Route:        ${route}`);
-    lines.push(`Flight Rules: ${flightRules}`);
+    const frLabel = flightRules === 'SOLO' ? 'VFR — Student Solo' : flightRules;
+    lines.push(`Flight Rules: ${frLabel}`);
+    lines.push(`Minimums:     ${_currentMinimumsMode.replace('_', ' ').toUpperCase()} (active at brief generation)`);
     lines.push(`Generated:    ${now} ${tzAbbr(tz)}`);
     lines.push('');
 
@@ -3823,6 +3878,7 @@
         section.push(`Period:           ${a.tafPeriodLabel}${tempoStr}`);
       }
       section.push(`Recommendation:   ${a.recommendation}`);
+      if (a.isNight && !a.isIFR) section.push(`Minimums:         NIGHT minimums applied`);
       if (rawMetar) section.push(`Raw METAR:        ${rawMetar}`);
       section.push('');
       section.push('Conditions:');
@@ -3834,7 +3890,7 @@
       section.push(`  Dewpoint:       ${dewDisp}`);
       section.push(`  Density Alt:    ${daDisplay}`);
       section.push('');
-      section.push('Personal Minimums:');
+      section.push(a.isNight && !a.isIFR ? 'Night Minimums (Applied):' : 'Personal Minimums:');
       section.push(`  VIS  ≥${a.minVisibilitySM}SM`.padEnd(24) + visPass);
       section.push(`  CEIL ≥${a.minCeilingFt}ft`.padEnd(24)    + (ceilingPass ? 'PASS' : 'FAIL'));
       section.push(`  XWD  ≤${a.maxCrosswindKts}kts`.padEnd(24) + xwdPass);
