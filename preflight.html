@@ -2223,6 +2223,7 @@
       const val    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
       const mode   = val === 'IFR' ? 'ifr' : val === 'SOLO' ? 'solo' : 'vfr_day';
       const isSolo = val === 'SOLO';
+      updateMinimumsTabs(val);
       setMinimumsMode(mode);
       updateSoloEndorsementVisibility();
       const toggle   = document.getElementById('cfiSignoffToggle');
@@ -2293,6 +2294,7 @@
 
   // Initialize minimums panel
   renderMinimumsPanel('vfr_day');
+  updateMinimumsTabs('VFR');
 
   // Wire minimums mode toggle buttons
   document.querySelectorAll('.mins-mode-btn').forEach(btn => {
@@ -2312,6 +2314,21 @@
       btn.classList.toggle('active', btn.dataset.mode === mode);
     });
     renderMinimumsPanel(mode);
+  }
+
+  // Show only the tabs relevant to the selected flight rules mode
+  // VFR → Day + Night, IFR → IFR only, Solo → Solo only
+  function updateMinimumsTabs(flightRulesVal) {
+    const visibleModes = flightRulesVal === 'IFR'  ? ['ifr']
+                       : flightRulesVal === 'SOLO' ? ['solo']
+                       : ['vfr_day', 'vfr_night'];
+    document.querySelectorAll('.mins-mode-btn').forEach(btn => {
+      btn.style.display = visibleModes.includes(btn.dataset.mode) ? '' : 'none';
+    });
+    // If current tab is no longer visible, switch to the first visible one
+    if (!visibleModes.includes(_currentMinimumsMode)) {
+      setMinimumsMode(visibleModes[0]);
+    }
   }
 
   function renderMinimumsPanel(mode) {
@@ -2938,7 +2955,10 @@
         const sunset  = new Date(ss.sunsetUtc);
         return t < sunrise || t > sunset;
       });
-      if (anyNight) setMinimumsMode('vfr_night');
+      if (anyNight) {
+        updateMinimumsTabs('VFR');
+        setMinimumsMode('vfr_night');
+      }
     }
   }
 
