@@ -2468,9 +2468,9 @@
         if (!e.target.matches('input[type="number"]')) return;
         enforceMinFloor(e.target);
         // Persist to in-memory store immediately
-        const mode = _currentMinimumsMode;
-        if (!_personalMins[mode]) _personalMins[mode] = {};
-        _personalMins[mode][e.target.id] = parseFloat(e.target.value);
+        const m = _currentMinimumsMode;
+        if (!_personalMins[m]) _personalMins[m] = {};
+        _personalMins[m][e.target.id] = parseFloat(e.target.value);
         // Update cell floor styling
         const cell = e.target.closest('.mins-input-cell');
         if (cell) cell.classList.toggle('at-floor',
@@ -2479,6 +2479,7 @@
       });
       minsInputs._floorListenerAdded = true;
     }
+    updateMinsStatus();
   }
 
   // Enforce instructor floor on personal minimums input
@@ -2505,24 +2506,75 @@
     const status  = document.getElementById('minsStatus');
     const saveBtn = document.getElementById('minsSaveBtn');
     if (!status || !saveBtn) return;
-    const hasChanges = JSON.stringify(_personalMins) !== JSON.stringify(_savedMins);
+    // Compare current DOM values against saved values for the active mode
+    const mode    = _currentMinimumsMode;
+    const saved   = _savedMins[mode] || {};
+    const floor   = resolveInstructorFloor(mode, null, null);
+    const defs    = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+    let hasChanges = false;
+    MINIMUMS_FIELDS.forEach(f => {
+      if (!f.modes.includes(mode)) return;
+      const el       = document.getElementById(f.key);
+      const current  = el ? parseFloat(el.value) : NaN;
+      const baseline = saved[f.key] ?? defs[f.key] ?? floor[f.key];
+      if (!isNaN(current) && current !== baseline) hasChanges = true;
+    });
     status.textContent  = hasChanges ? '● Unsaved changes' : '✓ Saved';
     status.className    = 'mins-status ' + (hasChanges ? 'unsaved' : 'saved');
     saveBtn.classList.toggle('has-changes', hasChanges);
   }
 
   function saveMinimums() {
-    // Commit all modes from _personalMins into _savedMins
-    Object.keys(_personalMins).forEach(mode => {
-      _savedMins[mode] = { ..._personalMins[mode] };
+    // Snapshot current DOM values for ALL modes by reading inputs when visible,
+    // and _personalMins for modes not currently displayed
+    const modes = ['vfr_day', 'vfr_night', 'ifr', 'solo'];
+    modes.forEach(mode => {
+      const floor = resolveInstructorFloor(mode, null, null);
+      const defs  = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+      const stored = _personalMins[mode] || {};
+      const snapshot = {};
+      MINIMUMS_FIELDS.forEach(f => {
+        if (!f.modes.includes(mode)) return;
+        // If this is the active mode, read from DOM; otherwise use stored or default
+        let val;
+        if (mode === _currentMinimumsMode) {
+          const el = document.getElementById(f.key);
+          val = el ? parseFloat(el.value) : NaN;
+          if (isNaN(val)) val = stored[f.key] ?? defs[f.key] ?? floor[f.key];
+        } else {
+          val = stored[f.key] ?? defs[f.key] ?? floor[f.key];
+        }
+        // Enforce floor
+        const floorVal = floor[f.key];
+        if (floorVal !== null && val !== null && !isNaN(val)) {
+          val = f.direction === 'min' ? Math.max(val, floorVal) : Math.min(val, floorVal);
+        }
+        snapshot[f.key] = isNaN(val) ? null : val;
+      });
+      _savedMins[mode]    = snapshot;
+      _personalMins[mode] = { ...snapshot };
     });
     updateMinsStatus();
   }
 
   function resetMinimums() {
-    // Clear in-memory store for current mode — will fall back to defaults on re-render
-    delete _personalMins[_currentMinimumsMode];
-    renderMinimumsPanel(_currentMinimumsMode);
+    // Reset current mode to instructor floors explicitly
+    const mode  = _currentMinimumsMode;
+    const floor = resolveInstructorFloor(mode, null, null);
+    const reset = {};
+    MINIMUMS_FIELDS.forEach(f => {
+      if (f.modes.includes(mode)) reset[f.key] = floor[f.key];
+    });
+    _personalMins[mode] = reset;
+    // Also clear from saved so reset persists after save
+    if (_savedMins[mode]) {
+      MINIMUMS_FIELDS.forEach(f => {
+        if (f.modes.includes(mode) && _savedMins[mode][f.key] !== undefined) {
+          _savedMins[mode][f.key] = floor[f.key];
+        }
+      });
+    }
+    renderMinimumsPanel(mode);
     updateMinsStatus();
   }
   function getMinimums() {
