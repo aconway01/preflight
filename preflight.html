@@ -492,7 +492,6 @@
     }
 
     .mins-reset {
-      margin-top: 12px;
       background: none;
       border: 1px dashed rgba(200,164,77,0.3);
       border-radius: 4px; padding: 6px 14px;
@@ -502,6 +501,55 @@
       cursor: pointer; transition: color 0.2s, border-color 0.2s;
     }
     .mins-reset:hover { color: var(--gold); border-color: var(--gold); }
+
+    .mins-save {
+      background: none;
+      border: 1px solid rgba(200,164,77,0.4);
+      border-radius: 4px; padding: 6px 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gold);
+      cursor: pointer; transition: all 0.2s; opacity: 0.5;
+    }
+    .mins-save.has-changes { opacity: 1; }
+    .mins-save:hover { background: rgba(200,164,77,0.1); }
+
+    .mins-actions {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 12px; flex-wrap: wrap;
+    }
+    .mins-status {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+      flex: 1;
+    }
+    .mins-status.unsaved { color: #FBBF24; }
+    .mins-status.saved   { color: #4ADE80; }
+
+    /* Personal minimums input cells — match readonly grid style but editable */
+    .mins-input-cell {
+      background: rgba(200,164,77,0.05);
+      border: 1px solid rgba(200,164,77,0.25);
+      border-radius: 4px;
+      padding: 6px 8px;
+    }
+    .mins-input-cell.at-floor {
+      border-color: rgba(148,163,184,0.15);
+    }
+    .mins-input-cell-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate); opacity: 0.7; margin-bottom: 4px;
+    }
+    .mins-input-cell input {
+      width: 100%; background: none; border: none; outline: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--white);
+      padding: 0; box-sizing: border-box;
+    }
+    .mins-input-cell.at-floor input { color: var(--slate-light); }
+    .mins-input-cell input::-webkit-inner-spin-button,
+    .mins-input-cell input::-webkit-outer-spin-button { opacity: 0.4; }
 
     /* ── CHECKLISTS ── */
     .checklist-item {
@@ -1429,7 +1477,10 @@
       .mins-readonly-cell-value { color: #111 !important; }
       .mins-field input     { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .mins-field label     { color: #555 !important; }
-      .mins-reset           { display: none !important; }
+      .mins-reset, .mins-save, .mins-actions { display: none !important; }
+      .mins-input-cell   { background: #f5f5f5 !important; border-color: #ddd !important; }
+      .mins-input-cell-label { color: #666 !important; opacity: 1; }
+      .mins-input-cell input { color: #111 !important; }
       .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .flight-info-field label { color: #555 !important; }
       .occupant-role, .occupant-name, .occupant-cert { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
@@ -1881,10 +1932,14 @@
       <div class="mins-tier" id="minsTierPersonal">
         <div class="mins-tier-label">
           <span class="mins-tier-name">Personal Minimums</span>
-          <span class="mins-tier-desc">Your self-imposed limits — must be at or above instructor minimums</span>
+          <span class="mins-tier-desc">Must be at or above instructor minimums</span>
         </div>
-        <div class="mins-inputs" id="minsInputs"></div>
-        <button class="mins-reset" id="minsResetBtn">Reset to instructor minimums</button>
+        <div class="mins-readonly-grid" id="minsInputs"></div>
+        <div class="mins-actions">
+          <span class="mins-status" id="minsStatus"></span>
+          <button class="mins-reset" id="minsResetBtn">Reset to instructor minimums</button>
+          <button class="mins-save"  id="minsSaveBtn">Save minimums</button>
+        </div>
       </div>
 
       <div class="solo-locked-note" id="soloLockedNote"></div>
@@ -2221,10 +2276,8 @@
   document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
     radio.addEventListener('change', () => {
       const val    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
-      const mode   = val === 'IFR' ? 'ifr' : val === 'SOLO' ? 'solo' : 'vfr_day';
       const isSolo = val === 'SOLO';
       updateMinimumsTabs(val);
-      setMinimumsMode(mode);
       updateSoloEndorsementVisibility();
       const toggle   = document.getElementById('cfiSignoffToggle');
       if (toggle && isSolo) toggle.checked = true;
@@ -2302,8 +2355,12 @@
     btn.addEventListener('click', () => setMinimumsMode(btn.dataset.mode));
   });
 
-  // Wire reset button
+  // Wire reset and save buttons
   document.getElementById('minsResetBtn').addEventListener('click', resetMinimums);
+  document.getElementById('minsSaveBtn').addEventListener('click', saveMinimums);
+
+  // Initialize status
+  updateMinsStatus();
 
   // ── MINIMUMS ──
   function setMinimumsMode(mode) {
@@ -2317,16 +2374,22 @@
   // Show only the tabs relevant to the selected flight rules mode
   // VFR → Day + Night, IFR → IFR only, Solo → Solo only
   function updateMinimumsTabs(flightRulesVal) {
-    const visibleModes = flightRulesVal === 'IFR'  ? ['ifr']
-                       : flightRulesVal === 'SOLO' ? ['solo']
-                       : ['vfr_day', 'vfr_night'];
+    const isIFR  = flightRulesVal === 'IFR';
+    const isSolo = flightRulesVal === 'SOLO';
+    const isVFR  = !isIFR && !isSolo;
+
+    // VFR → Day + Night, IFR → IFR only, Solo → Solo only
     document.querySelectorAll('.mins-mode-btn').forEach(btn => {
-      btn.style.display = visibleModes.includes(btn.dataset.mode) ? '' : 'none';
+      const m = btn.dataset.mode;
+      const visible = (isVFR  && (m === 'vfr_day' || m === 'vfr_night')) ||
+                      (isIFR  && m === 'ifr') ||
+                      (isSolo && m === 'solo');
+      btn.style.display = visible ? '' : 'none';
     });
-    // If current tab is no longer visible, switch to the first visible one
-    if (!visibleModes.includes(_currentMinimumsMode)) {
-      setMinimumsMode(visibleModes[0]);
-    }
+
+    // Always snap to the primary tab for the selected flight rules
+    const primaryMode = isIFR ? 'ifr' : isSolo ? 'solo' : 'vfr_day';
+    setMinimumsMode(primaryMode);
   }
 
   function renderMinimumsPanel(mode) {
@@ -2374,31 +2437,45 @@
     // ── Personal minimums inputs ──
     const minsInputs = document.getElementById('minsInputs');
     if (minsInputs) {
-      const defs = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+      const saved  = _savedMins[mode]    || {};
+      const stored = _personalMins[mode] || {};
+      const defs   = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+
+      minsInputs.className = 'mins-readonly-grid';
       minsInputs.innerHTML = fields.map(f => {
         const floorVal = instrFloor[f.key];
-        const defVal   = defs[f.key] ?? floorVal;
-        let val = defVal;
+        // Priority: unsaved in-memory → saved → default → floor
+        const rawVal   = stored[f.key] ?? saved[f.key] ?? defs[f.key] ?? floorVal;
+        let val = rawVal;
         if (floorVal !== null && val !== null) {
           val = f.direction === 'min' ? Math.max(val, floorVal) : Math.min(val, floorVal);
         }
-        const step = f.unit === 'SM' ? '0.5' : f.unit === 'ft' ? '100' : '1';
+        const step    = f.unit === 'SM' ? '0.5' : f.unit === 'ft' ? '100' : '1';
         const atFloor = val === floorVal ? ' at-floor' : '';
-        return `<div class="mins-field">
-          <label>${f.label} (${f.unit})</label>
+        return `<div class="mins-input-cell${atFloor}" data-field="${f.key}">
+          <div class="mins-input-cell-label">${f.label} (${f.unit})</div>
           <input type="number" id="${f.key}" value="${val ?? ''}"
             min="0" step="${step}"
             data-floor="${floorVal ?? ''}"
-            data-direction="${f.direction}"
-            class="${atFloor}">
+            data-direction="${f.direction}">
         </div>`;
       }).join('');
     }
 
-    // Wire floor enforcement via event delegation (only once per container)
-    if (!minsInputs._floorListenerAdded) {
+    // Wire floor enforcement and change tracking via event delegation (only once)
+    if (minsInputs && !minsInputs._floorListenerAdded) {
       minsInputs.addEventListener('input', e => {
-        if (e.target.matches('input[type="number"]')) enforceMinFloor(e.target);
+        if (!e.target.matches('input[type="number"]')) return;
+        enforceMinFloor(e.target);
+        // Persist to in-memory store immediately
+        const mode = _currentMinimumsMode;
+        if (!_personalMins[mode]) _personalMins[mode] = {};
+        _personalMins[mode][e.target.id] = parseFloat(e.target.value);
+        // Update cell floor styling
+        const cell = e.target.closest('.mins-input-cell');
+        if (cell) cell.classList.toggle('at-floor',
+          parseFloat(e.target.value) === parseFloat(e.target.dataset.floor));
+        updateMinsStatus();
       });
       minsInputs._floorListenerAdded = true;
     }
@@ -2424,21 +2501,50 @@
     return _currentMinimumsMode;
   }
 
+  // ── PERSONAL MINIMUMS PERSISTENCE ──
+  // _personalMins: in-memory working copy, written on every input change
+  // _savedMins:    committed copy, written on Save — used by brief and restored on reload
+  const _personalMins = {};
+  const _savedMins    = {};
+
+  function updateMinsStatus() {
+    const status  = document.getElementById('minsStatus');
+    const saveBtn = document.getElementById('minsSaveBtn');
+    if (!status || !saveBtn) return;
+    const hasChanges = JSON.stringify(_personalMins) !== JSON.stringify(_savedMins);
+    status.textContent  = hasChanges ? '● Unsaved changes' : '✓ Saved';
+    status.className    = 'mins-status ' + (hasChanges ? 'unsaved' : 'saved');
+    saveBtn.classList.toggle('has-changes', hasChanges);
+  }
+
+  function saveMinimums() {
+    // Commit all modes from _personalMins into _savedMins
+    Object.keys(_personalMins).forEach(mode => {
+      _savedMins[mode] = { ..._personalMins[mode] };
+    });
+    updateMinsStatus();
+  }
+
   function resetMinimums() {
+    // Clear in-memory store for current mode — will fall back to defaults on re-render
+    delete _personalMins[_currentMinimumsMode];
     renderMinimumsPanel(_currentMinimumsMode);
-    document.getElementById('minsResetBtn').style.display = '';
+    updateMinsStatus();
   }
   function getMinimums() {
     const mode  = getMinimumsMode();
     const floor = resolveInstructorFloor(mode, null, null);
+    const saved = _savedMins[mode] || {};
+    const defs  = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
     const result = { isIFR: mode === 'ifr', isSolo: mode === 'solo' };
 
     MINIMUMS_FIELDS.forEach(f => {
-      const el  = document.getElementById(f.key);
-      const n   = el ? parseFloat(el.value) : NaN;
+      // Priority: saved → DOM input → default → floor
+      const el       = document.getElementById(f.key);
+      const domVal   = el ? parseFloat(el.value) : NaN;
+      const savedVal = saved[f.key];
       const floorVal = floor[f.key];
-      let val = isNaN(n) ? (floorVal ?? null) : n;
-      // Hard-block personal minimums from going below instructor floor
+      let val = savedVal ?? (!isNaN(domVal) ? domVal : (defs[f.key] ?? floorVal));
       if (floorVal !== null && val !== null) {
         val = f.direction === 'min'
           ? Math.max(val, floorVal)
