@@ -194,6 +194,69 @@
       box-shadow: 0 0 0 3px rgba(200,164,77,0.1);
     }
 
+    /* ── OCCUPANT SLOTS ── */
+    .occupant-slot {
+      display: grid;
+      grid-template-columns: 140px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .occupant-role {
+      height: 40px;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px;
+      padding: 0 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px; color: var(--white);
+      outline: none; cursor: pointer;
+      color-scheme: dark;
+    }
+    .occupant-role:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,164,77,0.1); }
+    .occupant-name {
+      height: 40px;
+      background: var(--navy);
+      border: 1px solid rgba(200,164,77,0.3);
+      border-radius: 4px;
+      padding: 0 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--white);
+      outline: none; box-sizing: border-box; width: 100%;
+    }
+    .occupant-name:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,164,77,0.1); }
+    .occupant-remove {
+      width: 32px; height: 32px;
+      background: none; border: none;
+      color: var(--slate); font-size: 18px; line-height: 1;
+      cursor: pointer; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .occupant-remove:hover { color: #F87171; background: rgba(248,113,113,0.08); }
+    .occupant-slot-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate);
+      margin-bottom: 5px;
+      grid-column: 1 / -1;
+    }
+    .btn-add-occupant {
+      margin-top: 4px;
+      background: none;
+      border: 1px dashed rgba(200,164,77,0.3);
+      border-radius: 4px;
+      color: var(--gold); opacity: 0.7;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 7px 14px; cursor: pointer;
+      transition: opacity 0.15s, border-color 0.15s;
+      width: 100%;
+    }
+    .btn-add-occupant:hover { opacity: 1; border-color: rgba(200,164,77,0.6); }
+
     /* ── CURRENCY PANEL ── */
     .currency-item {
       display: grid;
@@ -1253,6 +1316,9 @@
       #flightInfoPanelBody, #currencyPanelBody, #minimumsPanelBody { display: block !important; }
       .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .flight-info-field label { color: #555 !important; }
+      .occupant-role, .occupant-name { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
+      .occupant-remove, .btn-add-occupant { display: none !important; }
+      .occupant-slot-label { color: #555 !important; }
       .mins-field label { color: #555 !important; }
       .mins-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .mins-reset { display: none !important; }
@@ -1403,25 +1469,33 @@
       Flight Information
     </div>
     <div class="panel-body open" id="flightInfoPanelBody">
-      <div class="flight-info-grid">
+
+      <!-- PIC — always present, role locked -->
+      <div class="flight-info-grid" style="margin-bottom:12px;">
         <div class="flight-info-field">
-          <label>PIC Name</label>
+          <label>Pilot in Command</label>
           <input type="text" id="picName" placeholder="Full name" autocomplete="name">
-        </div>
-        <div class="flight-info-field">
-          <label>Student</label>
-          <input type="text" id="studentName" placeholder="Dual or supervised solo" autocomplete="off">
         </div>
         <div class="flight-info-field">
           <label>Certificate / License No.</label>
           <input type="text" id="picCert" placeholder="e.g. 1234567" autocomplete="off">
         </div>
+      </div>
+
+      <!-- Occupant slots — first one pre-populated, more added via button -->
+      <div id="occupantSlots">
+        <!-- Default second slot injected by JS on load -->
+      </div>
+      <button class="btn-add-occupant" id="addOccupantBtn" type="button">＋ Add Occupant</button>
+
+      <!-- Date and flight rules -->
+      <div class="flight-info-grid" style="margin-top:16px;">
         <div class="flight-info-field">
           <label>Flight Date</label>
           <input type="date" id="flightDate" color-scheme="dark">
         </div>
       </div>
-      <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(200,164,77,0.1); display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(200,164,77,0.1); display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
         <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--slate); white-space:nowrap;">Flight Rules</span>
         <div class="flight-rules-toggle">
           <input type="radio" name="flightRules" id="frVFR" value="VFR" checked>
@@ -1943,6 +2017,46 @@
     const el = document.getElementById('flightDate');
     if (el) el.value = new Date().toISOString().slice(0, 10);
   })();
+
+  // ── OCCUPANT SLOTS ──
+  const OCCUPANT_ROLES = ['SIC','CFI','Student','Safety Pilot','Passenger','DPE'];
+
+  function makeOccupantSlot(isDefault) {
+    const slot = document.createElement('div');
+    slot.className = 'occupant-slot';
+    slot.innerHTML = `
+      <div class="occupant-slot-label" style="margin-bottom:4px;">Occupant</div>
+      <select class="occupant-role">
+        <option value="" disabled selected>Role</option>
+        ${OCCUPANT_ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+      </select>
+      <input type="text" class="occupant-name" placeholder="Full name" autocomplete="off">
+      <button class="occupant-remove" type="button" title="Remove">✕</button>
+    `;
+    const removeBtn = slot.querySelector('.occupant-remove');
+    if (isDefault) {
+      removeBtn.style.visibility = 'hidden';
+    } else {
+      removeBtn.addEventListener('click', () => slot.remove());
+    }
+    return slot;
+  }
+
+  function addOccupantSlot() {
+    document.getElementById('occupantSlots').appendChild(makeOccupantSlot(false));
+  }
+
+  // Returns array of {role, name} for all filled occupant slots
+  function getOccupants() {
+    return [...document.querySelectorAll('.occupant-slot')].map(slot => ({
+      role: slot.querySelector('.occupant-role')?.value || '',
+      name: slot.querySelector('.occupant-name')?.value?.trim() || '',
+    })).filter(o => o.name || o.role);
+  }
+
+  // Initialize default second slot on load and wire Add Occupant button
+  document.getElementById('occupantSlots').appendChild(makeOccupantSlot(true));
+  document.getElementById('addOccupantBtn').addEventListener('click', addOccupantSlot);
 
   // ── MINIMUMS ──
   function resetMinimums() {
@@ -3071,11 +3185,14 @@
 
     // ── Flight Info ──
     const picName    = document.getElementById('picName')?.value?.trim()    || '—';
-    const studentName= document.getElementById('studentName')?.value?.trim()|| '—';
     const picCert    = document.getElementById('picCert')?.value?.trim()    || '—';
     const flightDate = document.getElementById('flightDate')?.value         || '—';
+    const occupants  = getOccupants();
     lines.push(`PIC:          ${picName}  (Cert: ${picCert})`);
-    lines.push(`Student:      ${studentName || '—'}`);
+    occupants.forEach(o => {
+      const roleLabel = (o.role || 'Occupant').padEnd(14);
+      lines.push(`${roleLabel}  ${o.name || '—'}`);
+    });
     lines.push(`Flight Date:  ${flightDate}`);
     lines.push(`Route:        ${route}`);
     lines.push(`Flight Rules: ${flightRules}`);
@@ -3498,7 +3615,6 @@
     const legs       = window._lastLegs;
     const tz         = window._lastTz || 'America/New_York';
     const picName    = document.getElementById('picName')?.value?.trim() || '';
-    const studentName= document.getElementById('studentName')?.value?.trim() || '';
     const flightDate = document.getElementById('flightDate')?.value || '';
     const flightRules= window._lastFlightRules || 'VFR';
 
@@ -3511,14 +3627,15 @@
 
     const parts = [];
     if (flightDate) {
-      // flightDate is YYYY-MM-DD — parse as local date to avoid UTC offset shifting the day
       const [y, m, d] = flightDate.split('-').map(Number);
       const dateObj = new Date(y, m - 1, d);
       parts.push(dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
     }
     if (flightRules) parts.push(flightRules);
     if (picName) parts.push(`PIC: ${picName}`);
-    if (studentName) parts.push(`Student: ${studentName}`);
+    getOccupants().forEach(o => {
+      if (o.name) parts.push(`${o.role || 'Occupant'}: ${o.name}`);
+    });
     parts.push(`Generated: ${new Date().toLocaleString('en-US', { timeZone: tz, dateStyle: 'medium', timeStyle: 'short' })} ${tzAbbr(tz)}`);
     metaEl.textContent = parts.join('  ·  ');
   }
