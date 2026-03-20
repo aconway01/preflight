@@ -619,8 +619,11 @@
       user-select: none;
       flex: 1; text-align: center;
       display: flex; align-items: center; justify-content: center;
-      align-self: stretch;
+      align-self: stretch; white-space: nowrap;
     }
+
+    /* Solo label gets more flex weight to accommodate longer text */
+    .flight-rules-toggle label[for="frSolo"] { flex: 1.6; }
 
     .flight-rules-toggle input[type="radio"]:checked + label {
       background: rgba(200,164,77,0.15);
@@ -1264,6 +1267,10 @@
       .leg-row-hints > div:last-child { display: none; }
       .flight-info-grid { grid-template-columns: 1fr; }
       .flight-rules-toggle { width: 100%; }
+      .flight-rules-toggle label {
+        font-size: 8px; letter-spacing: 0.8px; padding: 6px 8px;
+      }
+      .flight-rules-toggle label[for="frSolo"] { flex: 1.8; }
       .mins-inputs { grid-template-columns: 1fr 1fr; align-items: end; }
       .leg-section-header::after { display: none; }
       .leg-rec-badge { white-space: normal; word-break: break-word; font-size: 9px; }
@@ -2373,7 +2380,8 @@
       });
       minsInputs._floorListenerAdded = true;
     }
-    const soloNote = document.getElementById('soloLockedNote');
+    const isSolo    = mode === 'solo';
+    const soloNote  = document.getElementById('soloLockedNote');
     if (soloNote) {
       soloNote.style.display = isSolo ? 'block' : 'none';
       soloNote.textContent   = isSolo
