@@ -3250,8 +3250,7 @@
     // ── Winds Aloft ──
     if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
       html += `<div class="route-section">
-        <div class="route-section-label">Winds Aloft · Nearest Station: ${ri.windsAloft.station || '—'}</div>
-        ${ri.windsAloft.staleWarning ? `<div class="route-advisory warn" style="margin-bottom:8px;">⚠ ${ri.windsAloft.staleWarning}</div>` : ''}
+        <div class="route-section-label">Winds Aloft · Nearest Station: ${ri.windsAloft.station || '—'}${ri.windsAloft.forecastCycle ? ` · Cycle: ${ri.windsAloft.forecastCycle}Z` : ''}</div>
         <div class="winds-grid">`;
       for (const lvl of ri.windsAloft.levels) {
         const isCruise = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500;
@@ -3989,10 +3988,8 @@
 
         // Winds aloft
         if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
-          lines.push(`Winds Aloft (${ri.windsAloft.station || '?'}):`);
-          if (ri.windsAloft.staleWarning) {
-            lines.push(`  ⚠ ${ri.windsAloft.staleWarning}`);
-          }
+          const cycleLabel = ri.windsAloft.forecastCycle ? ` (${ri.windsAloft.forecastCycle}Z cycle)` : '';
+          lines.push(`Winds Aloft (${ri.windsAloft.station || '?'})${cycleLabel}:`);
           for (const lvl of ri.windsAloft.levels) {
             const star = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500 ? ' ★' : '';
             if (lvl.calm) {
