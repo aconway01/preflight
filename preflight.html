@@ -286,6 +286,7 @@
       border-bottom: 1px solid rgba(200,164,77,0.08);
     }
     .currency-item:last-child { border-bottom: none; }
+    .currency-hidden { display: none; }
 
     @media (max-width: 480px) {
       .currency-item {
@@ -1472,6 +1473,8 @@
       .mins-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .mins-reset { display: none !important; }
       .currency-item { border-bottom-color: #ddd; }
+      .currency-hidden { display: none !important; }
+      .solo-locked-note, #minsSoloNote { color: #555 !important; }
       .currency-label { color: #111 !important; }
       .currency-desc { color: #555 !important; }
       .currency-number, .currency-date { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
@@ -2262,7 +2265,7 @@
     // Show/hide currency items based on flight rules
     document.querySelectorAll('.currency-item[data-currency-modes]').forEach(item => {
       const modes = item.dataset.currencyModes.split(' ');
-      item.style.display = modes.includes(modeKey) ? '' : 'none';
+      item.classList.toggle('currency-hidden', !modes.includes(modeKey));
     });
 
     // Show/hide solo endorsement section
