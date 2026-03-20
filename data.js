@@ -39,7 +39,7 @@ const CA_DATA = {
       maxGust:        null,
       cautionDA:      null,
       noGoDA:         null,
-      maxPressureAlt: 12500, // ft MSL — O2 required >30min above this (FAR 91.211)
+      maxPressureAlt: 12500, // ft MSL — O2 caution threshold (FAR 91.211(a)(1)); hard limit 14,000ft
     },
     ifr: {
       minVis:         null,  // approach-specific — verify plates
