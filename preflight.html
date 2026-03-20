@@ -198,9 +198,17 @@
     .occupant-slot {
       display: grid;
       grid-template-columns: 140px 1fr auto;
+      grid-template-rows: auto;
       gap: 8px;
       align-items: center;
       margin-bottom: 8px;
+    }
+    .occupant-slot-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--slate);
+      margin-bottom: 5px;
+      grid-column: 1 / -1;
     }
     .occupant-role {
       height: 40px;
@@ -211,7 +219,7 @@
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px; color: var(--white);
       outline: none; cursor: pointer;
-      color-scheme: dark;
+      color-scheme: dark; width: 100%;
     }
     .occupant-role:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,164,77,0.1); }
     .occupant-name {
@@ -235,13 +243,6 @@
       flex-shrink: 0;
     }
     .occupant-remove:hover { color: #F87171; background: rgba(248,113,113,0.08); }
-    .occupant-slot-label {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 9px; letter-spacing: 1.5px;
-      text-transform: uppercase; color: var(--slate);
-      margin-bottom: 5px;
-      grid-column: 1 / -1;
-    }
     .btn-add-occupant {
       margin-top: 4px;
       background: none;
@@ -302,6 +303,15 @@
       .footer-logo {
         height: 28px;
       }
+      /* Occupant slots — stack role over name on narrow screens */
+      .occupant-slot {
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+      }
+      .occupant-slot-label { grid-column: 1 / -1; }
+      .occupant-role       { grid-column: 1; grid-row: 1; }
+      .occupant-remove     { grid-column: 2; grid-row: 1; align-self: center; }
+      .occupant-name       { grid-column: 1 / -1; grid-row: 2; }
     }
 
     .currency-label {
