@@ -2045,7 +2045,7 @@
   const OCCUPANT_ROLES = ['SIC','CFI','Student','Safety Pilot','Passenger','DPE'];
   const CERT_ROLES     = new Set(['SIC','CFI','Student','Safety Pilot','DPE']);
 
-  function makeOccupantSlot(isDefault) {
+  function makeOccupantSlot() {
     const slot = document.createElement('div');
     slot.className = 'occupant-slot';
     slot.innerHTML = `
@@ -2062,21 +2062,16 @@
     const roleSelect = slot.querySelector('.occupant-role');
     const certInput  = slot.querySelector('.occupant-cert');
 
-    // Show/hide cert field based on selected role
     roleSelect.addEventListener('change', () => {
       certInput.style.display = CERT_ROLES.has(roleSelect.value) ? '' : 'none';
     });
 
-    if (isDefault) {
-      removeBtn.style.visibility = 'hidden';
-    } else {
-      removeBtn.addEventListener('click', () => slot.remove());
-    }
+    removeBtn.addEventListener('click', () => slot.remove());
     return slot;
   }
 
   function addOccupantSlot() {
-    document.getElementById('occupantSlots').appendChild(makeOccupantSlot(false));
+    document.getElementById('occupantSlots').appendChild(makeOccupantSlot());
   }
 
   // Returns array of {role, name, cert} for all filled occupant slots
@@ -2089,7 +2084,7 @@
   }
 
   // Initialize default second slot on load and wire Add Occupant button
-  document.getElementById('occupantSlots').appendChild(makeOccupantSlot(true));
+  document.getElementById('occupantSlots').appendChild(makeOccupantSlot());
   document.getElementById('addOccupantBtn').addEventListener('click', addOccupantSlot);
 
   // ── MINIMUMS ──
