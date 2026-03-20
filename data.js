@@ -10,6 +10,9 @@
 //
 // null at any level means "not set here — fall through to next level"
 // FAA minimums are always fully populated and serve as absolute floor.
+//
+// Solo modes are split into solo_day and solo_night.
+// Night solo requires a separate FAR 61.93 endorsement.
 // ============================================================
 
 const CA_DATA = {
@@ -51,7 +54,7 @@ const CA_DATA = {
       noGoDA:         null,
       maxPressureAlt: 12500,
     },
-    solo: {
+    solo_day: {
       minVis:         3,     // SM — FAR 61.89(a)(6)
       minCeil:        1000,  // ft AGL — FAR 61.89(a)(6)
       maxXwd:         null,
@@ -60,6 +63,16 @@ const CA_DATA = {
       cautionDA:      null,
       noGoDA:         null,
       maxPressureAlt: null,
+    },
+    solo_night: {
+      minVis:         3,     // SM — FAR 61.89(a)(6) applies at night too
+      minCeil:        1000,  // ft AGL — FAR 61.89(a)(6)
+      maxXwd:         null,
+      maxTotalWind:   null,
+      maxGust:        null,
+      cautionDA:      null,
+      noGoDA:         null,
+      maxPressureAlt: 12500, // O2 caution applies at night — FAR 91.211
     },
   },
 
@@ -99,7 +112,7 @@ const CA_DATA = {
         noGoDA:         5000,
         maxPressureAlt: null,
       },
-      solo: {
+      solo_day: {
         minVis:         5,
         minCeil:        3000,
         maxXwd:         10,
@@ -109,22 +122,21 @@ const CA_DATA = {
         noGoDA:         5000,
         maxPressureAlt: null,
       },
+      solo_night: {
+        minVis:         5,
+        minCeil:        3000,
+        maxXwd:         10,
+        maxTotalWind:   15,
+        maxGust:        15,
+        cautionDA:      3000,
+        noGoDA:         5000,
+        maxPressureAlt: 12500,
+      },
     },
 
-    // Per-aircraft overrides keyed by tail number
-    aircraft_minimums: {
-      // 'N12345': { vfr_day: { maxXwd: 10 } }
-    },
-
-    // Per-student overrides keyed by student cert number
-    student_minimums: {
-      // 'A1234567': { vfr_day: { minVis: 6 } }
-    },
-
-    // Per-student per-aircraft overrides
-    student_aircraft_minimums: {
-      // 'A1234567': { 'N12345': { solo: { maxXwd: 8 } } }
-    },
+    aircraft_minimums:         {},
+    student_minimums:          {},
+    student_aircraft_minimums: {},
   },
 
   // ── Instructors ──
@@ -165,7 +177,7 @@ const CA_DATA = {
           noGoDA:         5000,
           maxPressureAlt: null,
         },
-        solo: {
+        solo_day: {
           minVis:         5,
           minCeil:        3000,
           maxXwd:         10,
@@ -174,6 +186,16 @@ const CA_DATA = {
           cautionDA:      3000,
           noGoDA:         5000,
           maxPressureAlt: null,
+        },
+        solo_night: {
+          minVis:         5,
+          minCeil:        3000,
+          maxXwd:         10,
+          maxTotalWind:   15,
+          maxGust:        15,
+          cautionDA:      3000,
+          noGoDA:         5000,
+          maxPressureAlt: 12500,
         },
       },
 
@@ -184,8 +206,6 @@ const CA_DATA = {
   ],
 
   // ── Default Personal Minimums ──
-  // Pre-populated into the personal minimums fields on page load.
-  // Pilot may only set values at or above the resolved instructor floor.
   DEFAULT_PERSONAL_MINS: {
     vfr_day: {
       minVis:         5,
@@ -217,7 +237,7 @@ const CA_DATA = {
       noGoDA:         5000,
       maxPressureAlt: null,
     },
-    solo: {
+    solo_day: {
       minVis:         5,
       minCeil:        3000,
       maxXwd:         10,
@@ -227,19 +247,28 @@ const CA_DATA = {
       noGoDA:         5000,
       maxPressureAlt: null,
     },
+    solo_night: {
+      minVis:         5,
+      minCeil:        3000,
+      maxXwd:         10,
+      maxTotalWind:   15,
+      maxGust:        15,
+      cautionDA:      3000,
+      noGoDA:         5000,
+      maxPressureAlt: 12500,
+    },
   },
 
   // ── Minimums Field Definitions ──
-  // Drives UI rendering. direction: 'min' = higher is safer, 'max' = lower is safer.
   MINIMUMS_FIELDS: [
-    { key: 'minVis',         label: 'Min Visibility',   unit: 'SM',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'minCeil',        label: 'Min Ceiling',      unit: 'ft',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'maxXwd',         label: 'Max Crosswind',    unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'maxTotalWind',   label: 'Max Total Wind',   unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'maxGust',        label: 'Max Gusts',        unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'cautionDA',      label: 'DA Caution',       unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'noGoDA',         label: 'DA No-Go',         unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo'] },
-    { key: 'maxPressureAlt', label: 'Max Pressure Alt', unit: 'ft',  direction: 'max', modes: ['vfr_night','ifr'] },
+    { key: 'minVis',         label: 'Min Visibility',   unit: 'SM',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'minCeil',        label: 'Min Ceiling',      unit: 'ft',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'maxXwd',         label: 'Max Crosswind',    unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'maxTotalWind',   label: 'Max Total Wind',   unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'maxGust',        label: 'Max Gusts',        unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'cautionDA',      label: 'DA Caution',       unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'noGoDA',         label: 'DA No-Go',         unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
+    { key: 'maxPressureAlt', label: 'Max Pressure Alt', unit: 'ft',  direction: 'max', modes: ['vfr_night','ifr','solo_night'] },
   ],
 
   // ── Timezone Abbreviations ──
@@ -281,8 +310,8 @@ const CA_DATA = {
       category: 'Altitude Limitations',
       severity: 'warn',
       items: [
-        { title: 'Winds Aloft Above 18,000ft',         detail: 'The winds aloft query uses level=low which covers 3,000–18,000ft only. IFR flights at FL200 and above receive no wind data. The cruise altitude input is capped at 17,500ft for VFR.' },
-        { title: 'Density Altitude Thresholds',        detail: 'Caution and no-go density altitude thresholds are set in instructor minimums and are not yet aircraft-specific. Aircraft-specific DA limits will be added with the aircraft profile feature.' },
+        { title: 'Winds Aloft Above 18,000ft',  detail: 'The winds aloft query uses level=low which covers 3,000–18,000ft only. IFR flights at FL200 and above receive no wind data. The cruise altitude input is capped at 17,500ft for VFR.' },
+        { title: 'Density Altitude Thresholds', detail: 'Caution and no-go density altitude thresholds are set in instructor minimums and are not yet aircraft-specific. Aircraft-specific DA limits will be added with the aircraft profile feature.' },
       ],
     },
     {
