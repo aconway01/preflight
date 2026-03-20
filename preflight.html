@@ -2225,8 +2225,15 @@
       const isSolo = val === 'SOLO';
       setMinimumsMode(mode);
       updateSoloEndorsementVisibility();
-      const toggle = document.getElementById('cfiSignoffToggle');
+      const toggle   = document.getElementById('cfiSignoffToggle');
       if (toggle && isSolo) toggle.checked = true;
+      const soloNote = document.getElementById('soloLockedNote');
+      if (soloNote) {
+        soloNote.style.display = isSolo ? 'block' : 'none';
+        soloNote.textContent   = isSolo
+          ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors.'
+          : '';
+      }
     });
   });
 
@@ -2379,14 +2386,6 @@
         if (e.target.matches('input[type="number"]')) enforceMinFloor(e.target);
       });
       minsInputs._floorListenerAdded = true;
-    }
-    const isSolo    = mode === 'solo';
-    const soloNote  = document.getElementById('soloLockedNote');
-    if (soloNote) {
-      soloNote.style.display = isSolo ? 'block' : 'none';
-      soloNote.textContent   = isSolo
-        ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors.'
-        : '';
     }
   }
 
