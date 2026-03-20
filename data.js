@@ -302,7 +302,7 @@ const CA_DATA = {
       category: 'Geographic Limitations',
       severity: 'warn',
       items: [
-        { title: 'Continental US Only',  detail: 'Winds aloft, G-AIRMETs, and hemispheric rule checks only cover CONUS. Routes to Canada, Alaska, Hawaii, or the Caribbean receive valid METARs/TAFs but degraded or incorrect route intelligence. No warning is shown when a route exits CONUS.' },
+        { title: 'Continental US Only',  detail: 'Winds aloft, G-AIRMETs, and hemispheric rule checks only cover CONUS. Routes to Canada, Alaska, Hawaii, or the Caribbean receive valid METARs/TAFs but degraded or incorrect route intelligence. A warning is shown when a route exits CONUS, but no supplemental international data is provided.' },
         { title: 'Magnetic Variation',   detail: 'The hemispheric rule check uses geodetic (true) bearing. FAR 91.159 specifies magnetic course. At KMRB variation is approximately 10°W. Routes with a true course near 080°–090° or 170°–180° should be verified on the sectional chart.' },
       ],
     },
@@ -326,8 +326,9 @@ const CA_DATA = {
       category: 'Forecast Currency',
       severity: 'info',
       items: [
-        { title: 'Winds Aloft Validity Window', detail: 'The fcst=06 winds aloft data is valid FOR USE 0800–1500Z. Outside that window, data is from the prior forecast cycle. No warning is displayed when outside the valid window.' },
+        { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (00Z, 06Z, 12Z, or 18Z) based on the current UTC time. The active cycle is shown next to the winds aloft station label. Winds aloft data covers 3,000–18,000ft only (level=low).' },
         { title: 'Advisory Cache TTLs',         detail: 'G-AIRMETs are cached 15 minutes, SIGMETs 10 minutes, PIREPs 5 minutes. An advisory issued immediately after a cache refresh will not appear until the TTL expires. In rapidly developing convective situations, re-request the briefing.' },
+        { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will use night minimums for the arrival analysis. However, the minimums panel tab must be manually set to VFR Night (or Solo Night) to edit personal night minimums before requesting the brief — the active panel tab at brief generation is recorded in the report.' },
       ],
     },
     {
