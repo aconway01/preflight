@@ -2292,11 +2292,12 @@
   document.getElementById('occupantSlots').appendChild(makeOccupantSlot());
   document.getElementById('addOccupantBtn').addEventListener('click', addOccupantSlot);
 
+  // ── MINIMUMS PANEL RENDERING ──
+  let _currentMinimumsMode = 'vfr_day';
+
   // Initialize minimums panel
   renderMinimumsPanel('vfr_day');
   updateMinimumsTabs('VFR');
-
-  // Wire minimums mode toggle buttons
   document.querySelectorAll('.mins-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => setMinimumsMode(btn.dataset.mode));
   });
@@ -2305,9 +2306,6 @@
   document.getElementById('minsResetBtn').addEventListener('click', resetMinimums);
 
   // ── MINIMUMS ──
-  // ── MINIMUMS PANEL RENDERING ──
-  let _currentMinimumsMode = 'vfr_day';
-
   function setMinimumsMode(mode) {
     _currentMinimumsMode = mode;
     document.querySelectorAll('.mins-mode-btn').forEach(btn => {
