@@ -1667,8 +1667,8 @@
     </div>
     <div class="panel-body" id="currencyPanelBody">
 
-      <!-- Day Landings -->
-      <div class="currency-item">
+      <!-- Day Landings — all modes -->
+      <div class="currency-item" data-currency-modes="vfr ifr solo">
         <div>
           <div class="currency-label">Day Passenger Currency</div>
           <div class="currency-desc">3 takeoffs and landings in the preceding 90 days — same category, class, and type (FAR 61.57a)</div>
@@ -1679,8 +1679,8 @@
         </div>
       </div>
 
-      <!-- Night Landings -->
-      <div class="currency-item">
+      <!-- Night Landings — all modes -->
+      <div class="currency-item" data-currency-modes="vfr ifr solo">
         <div>
           <div class="currency-label">Night Passenger Currency</div>
           <div class="currency-desc">3 takeoffs and full-stop landings between 1hr after sunset and 1hr before sunrise in the preceding 90 days (FAR 61.57b)</div>
@@ -1691,8 +1691,8 @@
         </div>
       </div>
 
-      <!-- IFR Currency -->
-      <div class="currency-item">
+      <!-- IFR Currency — IFR only -->
+      <div class="currency-item" data-currency-modes="ifr">
         <div>
           <div class="currency-label">IFR Currency</div>
           <div class="currency-desc">6 instrument approaches, holding, and intercepting/tracking within the preceding 6 calendar months (FAR 61.57c)</div>
@@ -1703,8 +1703,8 @@
         </div>
       </div>
 
-      <!-- Flight Review -->
-      <div class="currency-item">
+      <!-- Flight Review — all modes -->
+      <div class="currency-item" data-currency-modes="vfr ifr solo">
         <div>
           <div class="currency-label">Flight Review</div>
           <div class="currency-desc">Flight review within the preceding 24 calendar months — 1hr ground, 1hr flight with a CFI (FAR 61.56). Enter date of last review.</div>
@@ -1715,18 +1715,33 @@
         </div>
       </div>
 
-      <!-- Solo Endorsement — only visible in Student Solo mode -->
+      <!-- Solo Endorsements — only visible in Student Solo mode -->
       <div class="solo-endorsement-section" id="soloEndorsementSection">
+
+        <!-- Solo Endorsement (FAR 61.87) -->
         <div class="checklist-item">
           <div class="checklist-checkbox">
             <input type="checkbox" id="chk-solo-endorsement" onchange="updateChecklistItem(this)">
           </div>
           <div>
             <div class="checklist-label">Student Solo Endorsement</div>
-            <div class="checklist-desc">I confirm my solo endorsement is current, valid for this aircraft category/class, and authorises flight in today's conditions. Endorsement is recorded in my logbook (FAR 61.87).</div>
+            <div class="checklist-desc">Current solo endorsement valid for this aircraft category/class and today's conditions. Recorded in logbook (FAR 61.87).</div>
             <textarea class="checklist-notes" id="soloEndorsementNotes" placeholder="CFI name, endorsement date, conditions/limitations noted..." rows="2"></textarea>
           </div>
         </div>
+
+        <!-- Night Solo Endorsement (FAR 61.93) — always shown for solo -->
+        <div class="checklist-item" id="nightSoloEndorsementItem">
+          <div class="checklist-checkbox">
+            <input type="checkbox" id="chk-night-solo-endorsement" onchange="updateChecklistItem(this)">
+          </div>
+          <div>
+            <div class="checklist-label">Night Solo Endorsement</div>
+            <div class="checklist-desc">Separate night solo endorsement required for solo flight between sunset and sunrise. Must be current and recorded in logbook (FAR 61.93(b)(1)). Required even if departing before sunset if arrival is after sunset.</div>
+            <textarea class="checklist-notes" id="nightSoloEndorsementNotes" placeholder="CFI name, night solo endorsement date, authorized airports/areas..." rows="2"></textarea>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -1925,11 +1940,10 @@
         </div>
       </div>
 
-      <div class="solo-locked-note" id="soloLockedNote"></div>
+      <div class="solo-locked-note" id="minsSoloNote" style="display:none;"></div>
+
     </div>
   </div>
-
-  <!-- Limitations Panel -->
   <div class="panel" id="limitationsPanel">
     <div class="panel-label" id="limitationsPanelLabel" onclick="togglePanel('limitations')">
       <span class="toggle-arrow">▶</span>
@@ -2111,15 +2125,6 @@
     return resolved;
   }
 
-  // Returns the mode key for the current flight rules selection
-  function getMinimumsMode() {
-    const mode = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
-    if (mode === 'IFR')  return 'ifr';
-    if (mode === 'SOLO') return 'solo';
-    // VFR day/night — will be extended when day/night toggle is added to minimums panel
-    return 'vfr_day';
-  }
-
   // ── CLOCK ──
   // ── UTILITIES ──
   function tzAbbr(tz) {
@@ -2249,9 +2254,29 @@
 
   // Show/hide solo endorsement section based on flight rules mode
   function updateSoloEndorsementVisibility() {
-    const mode    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    const val    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    const isSolo = val === 'SOLO';
+    const isIFR  = val === 'IFR';
+    const modeKey = isIFR ? 'ifr' : isSolo ? 'solo' : 'vfr';
+
+    // Show/hide currency items based on flight rules
+    document.querySelectorAll('.currency-item[data-currency-modes]').forEach(item => {
+      const modes = item.dataset.currencyModes.split(' ');
+      item.style.display = modes.includes(modeKey) ? '' : 'none';
+    });
+
+    // Show/hide solo endorsement section
     const section = document.getElementById('soloEndorsementSection');
-    if (section) section.classList.toggle('visible', mode === 'SOLO');
+    if (section) section.classList.toggle('visible', isSolo);
+
+    // Copy solo note to minimums panel
+    const minsSoloNote = document.getElementById('minsSoloNote');
+    if (minsSoloNote) {
+      minsSoloNote.style.display = isSolo ? 'block' : 'none';
+      minsSoloNote.textContent   = isSolo
+        ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors. Night solo requires a separate FAR 61.93 endorsement.'
+        : '';
+    }
   }
 
   // Sync minimums panel tab when flight rules radio changes
@@ -2340,6 +2365,7 @@
   // Initialize minimums panel
   renderMinimumsPanel('vfr_day');
   updateMinimumsTabs('VFR');
+  updateSoloEndorsementVisibility();
   document.querySelectorAll('.mins-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => setMinimumsMode(btn.dataset.mode));
   });
@@ -3775,17 +3801,25 @@
     const nightVal  = document.getElementById('nightLandings')?.value;
     const ifrVal    = document.getElementById('ifrApproaches')?.value;
     const reviewVal = document.getElementById('flightReviewDate')?.value;
+    const isIFRFlight  = flightRules === 'IFR';
+    const isSoloFlight = flightRules === 'SOLO';
     lines.push('PILOT CURRENCY');
     lines.push('-'.repeat(50));
     lines.push(`  Day Landings (90 days):     ${dayVal   || '—'}  → ${document.getElementById('dayBadge')?.textContent         || '—'}`);
     lines.push(`  Night Landings (90 days):   ${nightVal || '—'}  → ${document.getElementById('nightBadge')?.textContent       || '—'}`);
-    lines.push(`  IFR Approaches (6 months):  ${ifrVal   || '—'}  → ${document.getElementById('ifrBadge')?.textContent         || '—'}`);
+    if (isIFRFlight) {
+      lines.push(`  IFR Approaches (6 months):  ${ifrVal || '—'}  → ${document.getElementById('ifrBadge')?.textContent || '—'}`);
+    }
     lines.push(`  Flight Review Date:         ${reviewVal|| '—'}  → ${document.getElementById('flightReviewBadge')?.textContent || '—'}`);
-    if (flightRules === 'SOLO') {
-      const endorsed = document.getElementById('chk-solo-endorsement')?.checked;
-      const endNotes = document.getElementById('soloEndorsementNotes')?.value?.trim();
-      lines.push(`  Solo Endorsement:           ${endorsed ? '✓ CONFIRMED' : '✗ NOT CONFIRMED'}`);
+    if (isSoloFlight) {
+      const endorsed     = document.getElementById('chk-solo-endorsement')?.checked;
+      const endNotes     = document.getElementById('soloEndorsementNotes')?.value?.trim();
+      const nightEnd     = document.getElementById('chk-night-solo-endorsement')?.checked;
+      const nightEndNotes = document.getElementById('nightSoloEndorsementNotes')?.value?.trim();
+      lines.push(`  Solo Endorsement (61.87):   ${endorsed ? '✓ CONFIRMED' : '✗ NOT CONFIRMED'}`);
       if (endNotes) lines.push(`    Notes: ${endNotes}`);
+      lines.push(`  Night Solo Endors (61.93):  ${nightEnd ? '✓ CONFIRMED' : '✗ NOT CONFIRMED'}`);
+      if (nightEndNotes) lines.push(`    Notes: ${nightEndNotes}`);
     }
     lines.push('');
 
