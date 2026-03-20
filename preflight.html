@@ -650,38 +650,22 @@
       border: 1px solid rgba(217,119,6,0.2);
       border-radius: 4px; display: none;
     }
-    .flight-rules-toggle {
-      display: flex; align-items: center; gap: 0;
-      border: 1px solid rgba(200,164,77,0.3);
-      border-radius: 4px; overflow: hidden;
+    /* ── FLIGHT RULES BUTTONS ── */
+    .flight-rules-btns {
+      display: flex; gap: 6px; flex-wrap: wrap;
     }
-
-    .flight-rules-toggle input[type="radio"] { display: none; }
-
-    .flight-rules-toggle label {
+    .flight-rules-btn {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 10px; letter-spacing: 1.5px;
       text-transform: uppercase; color: var(--slate);
       padding: 6px 14px; cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      border: 1px solid rgba(200,164,77,0.25);
+      border-radius: 4px; background: none;
+      transition: all 0.15s; white-space: nowrap;
       user-select: none;
-      flex: 1; text-align: center;
-      display: flex; align-items: center; justify-content: center;
-      align-self: stretch; white-space: nowrap;
     }
-
-    /* Solo label gets more flex weight to accommodate longer text */
-    .flight-rules-toggle label[for="frSolo"] { flex: 1.6; }
-
-    .flight-rules-toggle input[type="radio"]:checked + label {
-      background: rgba(200,164,77,0.15);
-      color: var(--gold);
-    }
-
-    .flight-rules-toggle label:hover {
-      background: rgba(200,164,77,0.05);
-      color: var(--slate-light);
-    }
+    .flight-rules-btn:hover  { border-color: rgba(200,164,77,0.5); color: var(--slate-light); }
+    .flight-rules-btn.active { background: rgba(200,164,77,0.12); border-color: var(--gold); color: var(--gold); }
 
     /* ── FLIGHT PLAN PANEL ── */
     .plan-header {
@@ -1314,11 +1298,6 @@
       .leg-row-hints > div:first-child { grid-column: 1 / -1; display: none; }
       .leg-row-hints > div:last-child { display: none; }
       .flight-info-grid { grid-template-columns: 1fr; }
-      .flight-rules-toggle { width: 100%; }
-      .flight-rules-toggle label {
-        font-size: 8px; letter-spacing: 0.8px; padding: 6px 8px;
-      }
-      .flight-rules-toggle label[for="frSolo"] { flex: 1.8; }
       .mins-inputs { grid-template-columns: 1fr 1fr; align-items: end; }
       .leg-section-header::after { display: none; }
       .leg-rec-badge { white-space: normal; word-break: break-word; font-size: 9px; }
@@ -1549,16 +1528,15 @@
       .route-advisory     { break-inside: avoid; }
       .mins-grid          { break-inside: avoid; }
 
-      /* Flight rules toggle — hide radio inputs, show selected value as text */
-      .flight-rules-toggle input[type="radio"] { display: none !important; }
-      .flight-rules-toggle label { display: none !important; }
-      .flight-rules-toggle input[type="radio"]:checked + label {
+      /* Flight rules — hide inactive buttons, show active as labeled badge */
+      .flight-rules-btn              { display: none !important; }
+      .flight-rules-btn.active       {
         display: inline-block !important;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 10pt; font-weight: 600;
         color: #111 !important;
-        background: #eee;
-        border: 1px solid #999;
+        background: #eee !important;
+        border: 1px solid #999 !important;
         padding: 2px 10px;
         border-radius: 3px;
       }
@@ -1662,15 +1640,16 @@
           <input type="date" id="flightDate" color-scheme="dark">
         </div>
       </div>
-      <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(200,164,77,0.1); display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-        <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--slate); white-space:nowrap;">Flight Rules</span>
-        <div class="flight-rules-toggle">
-          <input type="radio" name="flightRules" id="frVFR" value="VFR" checked>
-          <label for="frVFR">VFR</label>
-          <input type="radio" name="flightRules" id="frIFR" value="IFR">
-          <label for="frIFR">IFR</label>
-          <input type="radio" name="flightRules" id="frSolo" value="SOLO">
-          <label for="frSolo">VFR — Student Solo</label>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(200,164,77,0.1);">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--slate); margin-bottom:8px;">Flight Rules</div>
+        <!-- Hidden radios preserve existing change listener logic -->
+        <input type="radio" name="flightRules" id="frVFR"  value="VFR"  checked style="display:none;">
+        <input type="radio" name="flightRules" id="frIFR"  value="IFR"        style="display:none;">
+        <input type="radio" name="flightRules" id="frSolo" value="SOLO"       style="display:none;">
+        <div class="flight-rules-btns">
+          <button class="flight-rules-btn active" data-value="VFR">VFR</button>
+          <button class="flight-rules-btn"        data-value="IFR">IFR</button>
+          <button class="flight-rules-btn"        data-value="SOLO">VFR — Student Solo</button>
         </div>
       </div>
       <div class="solo-locked-note" id="soloLockedNote"></div>
@@ -2348,11 +2327,32 @@
   // ── MINIMUMS PANEL RENDERING ──
   let _currentMinimumsMode = 'vfr_day';
 
+  // ── PERSONAL MINIMUMS PERSISTENCE ──
+  // _personalMins: in-memory working copy, written on every input change
+  // _savedMins:    committed copy, written on Save — used by brief and restored on reload
+  const _personalMins = {};
+  const _savedMins    = {};
+
   // Initialize minimums panel
   renderMinimumsPanel('vfr_day');
   updateMinimumsTabs('VFR');
   document.querySelectorAll('.mins-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => setMinimumsMode(btn.dataset.mode));
+  });
+
+  // Wire flight rules buttons
+  document.querySelectorAll('.flight-rules-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      document.querySelectorAll('.flight-rules-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      // Check the corresponding hidden radio and fire its change event
+      const radio = document.querySelector(`input[name="flightRules"][value="${btn.dataset.value}"]`);
+      if (radio && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
   });
 
   // Wire reset and save buttons
@@ -2500,12 +2500,6 @@
   function getMinimumsMode() {
     return _currentMinimumsMode;
   }
-
-  // ── PERSONAL MINIMUMS PERSISTENCE ──
-  // _personalMins: in-memory working copy, written on every input change
-  // _savedMins:    committed copy, written on Save — used by brief and restored on reload
-  const _personalMins = {};
-  const _savedMins    = {};
 
   function updateMinsStatus() {
     const status  = document.getElementById('minsStatus');
