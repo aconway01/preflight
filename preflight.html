@@ -1840,10 +1840,10 @@
 
       <!-- Mode toggle -->
       <div class="mins-mode-row">
-        <button class="mins-mode-btn active" data-mode="vfr_day"   onclick="setMinimumsMode('vfr_day')">VFR Day</button>
-        <button class="mins-mode-btn"        data-mode="vfr_night" onclick="setMinimumsMode('vfr_night')">VFR Night</button>
-        <button class="mins-mode-btn"        data-mode="ifr"       onclick="setMinimumsMode('ifr')">IFR</button>
-        <button class="mins-mode-btn"        data-mode="solo"      onclick="setMinimumsMode('solo')">Student Solo</button>
+        <button class="mins-mode-btn active" data-mode="vfr_day">VFR Day</button>
+        <button class="mins-mode-btn"        data-mode="vfr_night">VFR Night</button>
+        <button class="mins-mode-btn"        data-mode="ifr">IFR</button>
+        <button class="mins-mode-btn"        data-mode="solo">Student Solo</button>
       </div>
 
       <!-- FAA Minimums — read-only reference -->
@@ -1855,6 +1855,9 @@
         <div class="mins-grid" id="minsGridFAA"></div>
         <div class="mins-ifr-note" id="minsIFRNote" style="display:none;">
           IFR approach minimums are procedure-specific. Verify from current approach plates.
+        </div>
+        <div class="mins-ifr-note" id="minsClassGNote" style="display:none;">
+          Class G uncontrolled airspace allows lower minimums (1SM day / 3SM night below 1,200ft AGL). Values shown apply to Class B/C/D/E airspace — verify sectional chart for your route.
         </div>
       </div>
 
@@ -1874,7 +1877,7 @@
           <span class="mins-tier-desc">Your self-imposed limits — must be at or above instructor minimums</span>
         </div>
         <div class="mins-inputs" id="minsInputs"></div>
-        <button class="mins-reset" id="minsResetBtn" onclick="resetMinimums()">Reset to instructor minimums</button>
+        <button class="mins-reset" id="minsResetBtn">Reset to instructor minimums</button>
       </div>
 
       <div class="solo-locked-note" id="soloLockedNote"></div>
@@ -2206,11 +2209,15 @@
     if (section) section.classList.toggle('visible', mode === 'SOLO');
   }
 
+  // Sync minimums panel tab when flight rules radio changes
+  // Also handles solo endorsement visibility and CFI sign-off toggle
   document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
     radio.addEventListener('change', () => {
+      const val    = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+      const mode   = val === 'IFR' ? 'ifr' : val === 'SOLO' ? 'solo' : 'vfr_day';
+      const isSolo = val === 'SOLO';
+      setMinimumsMode(mode);
       updateSoloEndorsementVisibility();
-      // Student Solo always requires CFI sign-off; other modes leave the choice to the pilot
-      const isSolo = document.querySelector('input[name="flightRules"]:checked')?.value === 'SOLO';
       const toggle = document.getElementById('cfiSignoffToggle');
       if (toggle && isSolo) toggle.checked = true;
     });
@@ -2273,6 +2280,14 @@
   // Initialize minimums panel
   renderMinimumsPanel('vfr_day');
 
+  // Wire minimums mode toggle buttons
+  document.querySelectorAll('.mins-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMinimumsMode(btn.dataset.mode));
+  });
+
+  // Wire reset button
+  document.getElementById('minsResetBtn').addEventListener('click', resetMinimums);
+
   // ── MINIMUMS ──
   // ── MINIMUMS PANEL RENDERING ──
   let _currentMinimumsMode = 'vfr_day';
@@ -2307,7 +2322,9 @@
         </div>`;
       }).join('');
     }
-    if (ifrNote) ifrNote.style.display = isIFR ? '' : 'none';
+    if (ifrNote)    ifrNote.style.display    = isIFR ? '' : 'none';
+    const classGNote = document.getElementById('minsClassGNote');
+    if (classGNote) classGNote.style.display = (mode === 'vfr_day' || mode === 'vfr_night') ? '' : 'none';
 
     // ── Instructor tier ──
     const instrGrid = document.getElementById('minsGridInstr');
@@ -2344,14 +2361,18 @@
             min="0" step="${step}"
             data-floor="${floorVal ?? ''}"
             data-direction="${f.direction}"
-            class="${atFloor}"
-            oninput="enforceMinFloor(this)">
+            class="${atFloor}">
         </div>`;
       }).join('');
     }
 
-    // Update solo note
-    const isSolo = mode === 'solo';
+    // Wire floor enforcement via event delegation (only once per container)
+    if (!minsInputs._floorListenerAdded) {
+      minsInputs.addEventListener('input', e => {
+        if (e.target.matches('input[type="number"]')) enforceMinFloor(e.target);
+      });
+      minsInputs._floorListenerAdded = true;
+    }
     const soloNote = document.getElementById('soloLockedNote');
     if (soloNote) {
       soloNote.style.display = isSolo ? 'block' : 'none';
@@ -2385,11 +2406,6 @@
     renderMinimumsPanel(_currentMinimumsMode);
     document.getElementById('minsResetBtn').style.display = '';
   }
-  // Update minimums when flight rules toggle changes
-  document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
-    radio.addEventListener('change', resetMinimums);
-  });
-
   function getMinimums() {
     const mode  = getMinimumsMode();
     const floor = resolveInstructorFloor(mode, null, null);
@@ -2903,6 +2919,20 @@
     window._lastLegs        = legs;
     window._lastTz          = tz;
     window._lastFlightRules = flightRulesMode || flightRules;
+
+    // Auto-switch minimums panel to VFR Night if departure is at night
+    // Only auto-switch if currently on VFR Day — don't override IFR or Solo
+    if (_currentMinimumsMode === 'vfr_day' && flightRules !== 'IFR' && flightRules !== 'SOLO') {
+      const anyNight = data.legs?.some(leg => {
+        const ss = leg.routeIntelligence?.sunriseSunset;
+        if (!ss?.sunriseUtc || !ss?.sunsetUtc || !leg.depTimeUtc) return false;
+        const t       = new Date(leg.depTimeUtc);
+        const sunrise = new Date(ss.sunriseUtc);
+        const sunset  = new Date(ss.sunsetUtc);
+        return t < sunrise || t > sunset;
+      });
+      if (anyNight) setMinimumsMode('vfr_night');
+    }
   }
 
   // ── RECOMMENDATION HELPERS ──
