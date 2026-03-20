@@ -393,6 +393,71 @@
     .solo-endorsement-section.visible { display: block; }
 
     /* ── MINIMUMS PANEL ── */
+    /* ── MINIMUMS MODE TOGGLE ── */
+    .mins-mode-row {
+      display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .mins-mode-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+      border: 1px solid rgba(200,164,77,0.25);
+      background: none; color: var(--slate);
+      transition: all 0.15s;
+    }
+    .mins-mode-btn:hover  { border-color: rgba(200,164,77,0.5); color: var(--slate-light); }
+    .mins-mode-btn.active { background: rgba(200,164,77,0.12); border-color: var(--gold); color: var(--gold); }
+
+    /* ── MINIMUMS TIERS ── */
+    .mins-tier {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(200,164,77,0.08);
+    }
+    .mins-tier:last-of-type { border-bottom: none; }
+    .mins-tier-label {
+      display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;
+    }
+    .mins-tier-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--gold); opacity: 0.85;
+    }
+    .mins-tier-desc {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10px; color: var(--slate); opacity: 0.7;
+    }
+    .mins-ifr-note {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10px; color: var(--slate); opacity: 0.7;
+      margin-top: 6px; line-height: 1.5;
+    }
+
+    /* Read-only tier grids (FAA + Instructor) */
+    .mins-readonly-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .mins-readonly-cell {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(148,163,184,0.1);
+      border-radius: 4px;
+      padding: 6px 8px;
+    }
+    .mins-readonly-cell-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate); opacity: 0.7; margin-bottom: 3px;
+    }
+    .mins-readonly-cell-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; color: var(--slate-light);
+    }
+    .mins-readonly-cell-value.n-a {
+      font-size: 11px; opacity: 0.4;
+    }
+
     .mins-inputs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -415,10 +480,15 @@
       font-family: 'IBM Plex Mono', monospace;
       font-size: 13px; color: var(--white); outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
     }
     .mins-field input:focus {
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(200,164,77,0.1);
+    }
+    .mins-field input.at-floor {
+      border-color: rgba(200,164,77,0.15);
+      color: var(--slate-light);
     }
 
     .mins-reset {
@@ -1343,6 +1413,16 @@
       .pirep-raw { color: #666 !important; }
       #flightInfoPanel, #currencyPanel, #minimumsPanel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
       #flightInfoPanelBody, #currencyPanelBody, #minimumsPanelBody { display: block !important; }
+      .mins-mode-row        { display: none !important; }
+      .mins-tier            { border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 10px; }
+      .mins-tier-name       { color: #333 !important; opacity: 1; }
+      .mins-tier-desc       { color: #666 !important; opacity: 1; }
+      .mins-readonly-cell   { background: #f5f5f5 !important; border-color: #ddd !important; }
+      .mins-readonly-cell-label { color: #666 !important; opacity: 1; }
+      .mins-readonly-cell-value { color: #111 !important; }
+      .mins-field input     { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
+      .mins-field label     { color: #555 !important; }
+      .mins-reset           { display: none !important; }
       .flight-info-field input { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .flight-info-field label { color: #555 !important; }
       .occupant-role, .occupant-name, .occupant-cert { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
@@ -1532,7 +1612,7 @@
           <input type="radio" name="flightRules" id="frIFR" value="IFR">
           <label for="frIFR">IFR</label>
           <input type="radio" name="flightRules" id="frSolo" value="SOLO">
-          <label for="frSolo">Student Solo</label>
+          <label for="frSolo">VFR — Student Solo</label>
         </div>
       </div>
       <div class="solo-locked-note" id="soloLockedNote"></div>
@@ -1754,36 +1834,50 @@
   <div class="panel" id="minimumsPanel">
     <div class="panel-label" id="minimumsPanelLabel" onclick="togglePanel('minimums')">
       <span class="toggle-arrow">▶</span>
-      Personal Minimums
+      Minimums
     </div>
     <div class="panel-body" id="minimumsPanelBody">
-      <div class="mins-inputs">
-        <div class="mins-field">
-          <label>Min Visibility (SM)</label>
-          <input type="number" id="minVis" value="5" min="0" step="0.5">
+
+      <!-- Mode toggle -->
+      <div class="mins-mode-row">
+        <button class="mins-mode-btn active" data-mode="vfr_day"   onclick="setMinimumsMode('vfr_day')">VFR Day</button>
+        <button class="mins-mode-btn"        data-mode="vfr_night" onclick="setMinimumsMode('vfr_night')">VFR Night</button>
+        <button class="mins-mode-btn"        data-mode="ifr"       onclick="setMinimumsMode('ifr')">IFR</button>
+        <button class="mins-mode-btn"        data-mode="solo"      onclick="setMinimumsMode('solo')">Student Solo</button>
+      </div>
+
+      <!-- FAA Minimums — read-only reference -->
+      <div class="mins-tier" id="minsTierFAA">
+        <div class="mins-tier-label">
+          <span class="mins-tier-name">FAA Minimums</span>
+          <span class="mins-tier-desc">Legal floors — immutable</span>
         </div>
-        <div class="mins-field">
-          <label>Min Ceiling (ft)</label>
-          <input type="number" id="minCeil" value="2500" min="0" step="100">
-        </div>
-        <div class="mins-field">
-          <label>Max Crosswind (kts)</label>
-          <input type="number" id="maxXwd" value="12" min="0" step="1">
-        </div>
-        <div class="mins-field">
-          <label>Max Gusts (kts)</label>
-          <input type="number" id="maxGust" value="18" min="0" step="1">
-        </div>
-        <div class="mins-field">
-          <label>DA Caution (ft)</label>
-          <input type="number" id="cautionDA" value="3000" min="0" step="500">
-        </div>
-        <div class="mins-field">
-          <label>DA No-Go (ft)</label>
-          <input type="number" id="noGoDA" value="5000" min="0" step="500">
+        <div class="mins-grid" id="minsGridFAA"></div>
+        <div class="mins-ifr-note" id="minsIFRNote" style="display:none;">
+          IFR approach minimums are procedure-specific. Verify from current approach plates.
         </div>
       </div>
-      <button class="mins-reset" id="minsResetBtn" onclick="resetMinimums()">Reset to defaults</button>
+
+      <!-- Instructor Minimums — read-only, sourced from data.js -->
+      <div class="mins-tier" id="minsTierInstr">
+        <div class="mins-tier-label">
+          <span class="mins-tier-name">Instructor Minimums</span>
+          <span class="mins-tier-desc" id="minsTierInstrDesc">Central Aviation · Andy Conway</span>
+        </div>
+        <div class="mins-grid" id="minsGridInstr"></div>
+      </div>
+
+      <!-- Personal Minimums — editable, hard-blocked below instructor floor -->
+      <div class="mins-tier" id="minsTierPersonal">
+        <div class="mins-tier-label">
+          <span class="mins-tier-name">Personal Minimums</span>
+          <span class="mins-tier-desc">Your self-imposed limits — must be at or above instructor minimums</span>
+        </div>
+        <div class="mins-inputs" id="minsInputs"></div>
+        <button class="mins-reset" id="minsResetBtn" onclick="resetMinimums()">Reset to instructor minimums</button>
+      </div>
+
+      <div class="solo-locked-note" id="soloLockedNote"></div>
     </div>
   </div>
 
@@ -1892,10 +1986,91 @@
 </div>
 
 <script>
-  const APPS_SCRIPT_URL = CA_DATA.APPS_SCRIPT_URL;
-  const DEFAULT_MINS    = CA_DATA.DEFAULT_MINS;
-  const IFR_MINS        = CA_DATA.IFR_MINS;
-  const SOLO_MINS       = CA_DATA.SOLO_MINS;
+  const APPS_SCRIPT_URL  = CA_DATA.APPS_SCRIPT_URL;
+  const FAA_MINIMUMS     = CA_DATA.FAA_MINIMUMS;
+  const SCHOOL           = CA_DATA.SCHOOL;
+  const INSTRUCTORS      = CA_DATA.INSTRUCTORS;
+  const MINIMUMS_FIELDS  = CA_DATA.MINIMUMS_FIELDS;
+
+  // ── MINIMUMS RESOLVER ──
+  // Walks the full hierarchy and returns the most restrictive value
+  // at each field for the given mode, aircraft, and student.
+  // direction: 'min' = higher is safer (vis/ceil), 'max' = lower is safer (wind/DA)
+  function resolveInstructorFloor(mode, aircraftId, studentCert) {
+    const instructor = INSTRUCTORS[0]; // single instructor for now
+    const resolved   = {};
+
+    MINIMUMS_FIELDS.forEach(f => {
+      if (!f.modes.includes(mode)) return;
+      const candidates = [];
+
+      // FAA floor
+      const faaVal = FAA_MINIMUMS[mode]?.[f.key];
+      if (faaVal !== null && faaVal !== undefined) candidates.push(faaVal);
+
+      // School general
+      const schoolVal = SCHOOL.minimums?.[mode]?.[f.key];
+      if (schoolVal !== null && schoolVal !== undefined) candidates.push(schoolVal);
+
+      // School aircraft
+      if (aircraftId) {
+        const sAcVal = SCHOOL.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
+        if (sAcVal !== null && sAcVal !== undefined) candidates.push(sAcVal);
+      }
+
+      // School student
+      if (studentCert) {
+        const sStuVal = SCHOOL.student_minimums?.[studentCert]?.[mode]?.[f.key];
+        if (sStuVal !== null && sStuVal !== undefined) candidates.push(sStuVal);
+      }
+
+      // School student aircraft
+      if (studentCert && aircraftId) {
+        const sStuAcVal = SCHOOL.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
+        if (sStuAcVal !== null && sStuAcVal !== undefined) candidates.push(sStuAcVal);
+      }
+
+      // Instructor general
+      const instrVal = instructor?.minimums?.[mode]?.[f.key];
+      if (instrVal !== null && instrVal !== undefined) candidates.push(instrVal);
+
+      // Instructor aircraft
+      if (aircraftId) {
+        const iAcVal = instructor?.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
+        if (iAcVal !== null && iAcVal !== undefined) candidates.push(iAcVal);
+      }
+
+      // Instructor student
+      if (studentCert) {
+        const iStuVal = instructor?.student_minimums?.[studentCert]?.[mode]?.[f.key];
+        if (iStuVal !== null && iStuVal !== undefined) candidates.push(iStuVal);
+      }
+
+      // Instructor student aircraft
+      if (studentCert && aircraftId) {
+        const iStuAcVal = instructor?.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
+        if (iStuAcVal !== null && iStuAcVal !== undefined) candidates.push(iStuAcVal);
+      }
+
+      if (candidates.length === 0) { resolved[f.key] = null; return; }
+
+      // Most restrictive: for 'min' fields take the highest value; for 'max' take the lowest
+      resolved[f.key] = f.direction === 'min'
+        ? Math.max(...candidates)
+        : Math.min(...candidates);
+    });
+
+    return resolved;
+  }
+
+  // Returns the mode key for the current flight rules selection
+  function getMinimumsMode() {
+    const mode = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    if (mode === 'IFR')  return 'ifr';
+    if (mode === 'SOLO') return 'solo';
+    // VFR day/night — will be extended when day/night toggle is added to minimums panel
+    return 'vfr_day';
+  }
 
   // ── CLOCK ──
   // ── UTILITIES ──
@@ -2095,71 +2270,156 @@
   document.getElementById('occupantSlots').appendChild(makeOccupantSlot());
   document.getElementById('addOccupantBtn').addEventListener('click', addOccupantSlot);
 
+  // Initialize minimums panel
+  renderMinimumsPanel('vfr_day');
+
   // ── MINIMUMS ──
-  function resetMinimums() {
-    const mode  = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
-    const isSolo = mode === 'SOLO';
-    const isIFR  = mode === 'IFR';
-    const m = isSolo ? SOLO_MINS : isIFR ? IFR_MINS : DEFAULT_MINS;
+  // ── MINIMUMS PANEL RENDERING ──
+  let _currentMinimumsMode = 'vfr_day';
 
-    document.getElementById('minVis').value    = m.minVis;
-    document.getElementById('minCeil').value   = m.minCeil;
-    document.getElementById('maxXwd').value    = m.maxXwd;
-    document.getElementById('maxGust').value   = m.maxGust;
-    document.getElementById('cautionDA').value = m.cautionDA;
-    document.getElementById('noGoDA').value    = m.noGoDA;
-
-    // Lock all minimums fields in Solo mode — enforce 61.89 as floor, CFI may tighten
-    const fields = ['minVis','minCeil','maxXwd','maxGust','cautionDA','noGoDA'];
-    fields.forEach(id => {
-      const el = document.getElementById(id);
-      if (isSolo) {
-        el.removeAttribute('readonly');
-        el.style.opacity = '';
-        el.style.cursor  = '';
-        el.dataset.soloFloor = m[id] !== undefined ? m[id] : SOLO_MINS[id];
-      } else {
-        delete el.dataset.soloFloor;
-        el.style.opacity = '';
-        el.style.cursor  = '';
-      }
+  function setMinimumsMode(mode) {
+    _currentMinimumsMode = mode;
+    document.querySelectorAll('.mins-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
     });
-    document.getElementById('minsResetBtn').style.display   = '';
-    document.getElementById('soloLockedNote').style.display = isSolo ? 'block' : 'none';
-    document.getElementById('soloLockedNote').textContent   = isSolo
-      ? '⚠ Student Solo — FAR 61.89 minimums enforced as floor (3SM visibility, 1,000ft ceiling). CFI may set stricter values but not lower.'
-      : '';
+    renderMinimumsPanel(mode);
   }
 
-  // Update minimums defaults when flight rules toggle changes
+  function renderMinimumsPanel(mode) {
+    const faaFloor   = FAA_MINIMUMS[mode] || {};
+    const instrFloor = resolveInstructorFloor(mode, null, null);
+    const fields     = MINIMUMS_FIELDS.filter(f => f.modes.includes(mode));
+    const isIFR      = mode === 'ifr';
+
+    // ── FAA tier ──
+    const faaGrid = document.getElementById('minsGridFAA');
+    const ifrNote = document.getElementById('minsIFRNote');
+    if (faaGrid) {
+      faaGrid.className = 'mins-readonly-grid';
+      faaGrid.innerHTML = fields.map(f => {
+        const val = faaFloor[f.key];
+        const display = (val === null || val === undefined)
+          ? `<span class="mins-readonly-cell-value n-a">—</span>`
+          : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
+        return `<div class="mins-readonly-cell">
+          <div class="mins-readonly-cell-label">${f.label}</div>
+          ${display}
+        </div>`;
+      }).join('');
+    }
+    if (ifrNote) ifrNote.style.display = isIFR ? '' : 'none';
+
+    // ── Instructor tier ──
+    const instrGrid = document.getElementById('minsGridInstr');
+    if (instrGrid) {
+      instrGrid.className = 'mins-readonly-grid';
+      instrGrid.innerHTML = fields.map(f => {
+        const val = instrFloor[f.key];
+        const display = (val === null || val === undefined)
+          ? `<span class="mins-readonly-cell-value n-a">—</span>`
+          : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
+        return `<div class="mins-readonly-cell">
+          <div class="mins-readonly-cell-label">${f.label}</div>
+          ${display}
+        </div>`;
+      }).join('');
+    }
+
+    // ── Personal minimums inputs ──
+    const minsInputs = document.getElementById('minsInputs');
+    if (minsInputs) {
+      const defs = CA_DATA.DEFAULT_PERSONAL_MINS[mode] || {};
+      minsInputs.innerHTML = fields.map(f => {
+        const floorVal = instrFloor[f.key];
+        const defVal   = defs[f.key] ?? floorVal;
+        let val = defVal;
+        if (floorVal !== null && val !== null) {
+          val = f.direction === 'min' ? Math.max(val, floorVal) : Math.min(val, floorVal);
+        }
+        const step = f.unit === 'SM' ? '0.5' : f.unit === 'ft' ? '100' : '1';
+        const atFloor = val === floorVal ? ' at-floor' : '';
+        return `<div class="mins-field">
+          <label>${f.label} (${f.unit})</label>
+          <input type="number" id="${f.key}" value="${val ?? ''}"
+            min="0" step="${step}"
+            data-floor="${floorVal ?? ''}"
+            data-direction="${f.direction}"
+            class="${atFloor}"
+            oninput="enforceMinFloor(this)">
+        </div>`;
+      }).join('');
+    }
+
+    // Update solo note
+    const isSolo = mode === 'solo';
+    const soloNote = document.getElementById('soloLockedNote');
+    if (soloNote) {
+      soloNote.style.display = isSolo ? 'block' : 'none';
+      soloNote.textContent   = isSolo
+        ? '⚠ VFR — Student Solo: FAR 61.89 and instructor minimums are enforced as floors.'
+        : '';
+    }
+  }
+
+  // Enforce instructor floor on personal minimums input
+  function enforceMinFloor(input) {
+    const floor     = input.dataset.floor !== '' ? parseFloat(input.dataset.floor) : null;
+    const direction = input.dataset.direction;
+    const val       = parseFloat(input.value);
+    if (floor === null || isNaN(val)) return;
+    const blocked = direction === 'min' ? val < floor : val > floor;
+    if (blocked) {
+      input.value = floor;
+      input.classList.add('at-floor');
+    } else {
+      input.classList.toggle('at-floor', val === floor);
+    }
+  }
+
+  // Override getMinimumsMode to use the panel's active mode button
+  function getMinimumsMode() {
+    return _currentMinimumsMode;
+  }
+
+  function resetMinimums() {
+    renderMinimumsPanel(_currentMinimumsMode);
+    document.getElementById('minsResetBtn').style.display = '';
+  }
+  // Update minimums when flight rules toggle changes
   document.querySelectorAll('input[name="flightRules"]').forEach(radio => {
     radio.addEventListener('change', resetMinimums);
   });
 
   function getMinimums() {
-    const isSolo = document.querySelector('input[name="flightRules"]:checked')?.value === 'SOLO';
-    function parseMins(id, fallback) {
-      const el    = document.getElementById(id);
-      const n     = parseFloat(el.value);
-      const floor = isSolo && el.dataset.soloFloor !== undefined ? parseFloat(el.dataset.soloFloor) : null;
-      const val   = isNaN(n) ? fallback : n;
-      // In Solo mode, never allow value below the 61.89 floor
-      // For visibility/ceiling (higher = stricter): enforce minimum
-      // For crosswind/gust (lower = stricter): enforce maximum
-      if (floor !== null) {
-        if (id === 'minVis' || id === 'minCeil') return Math.max(val, floor);
-        if (id === 'maxXwd' || id === 'maxGust') return Math.min(val, floor);
+    const mode  = getMinimumsMode();
+    const floor = resolveInstructorFloor(mode, null, null);
+    const result = { isIFR: mode === 'ifr', isSolo: mode === 'solo' };
+
+    MINIMUMS_FIELDS.forEach(f => {
+      const el  = document.getElementById(f.key);
+      const n   = el ? parseFloat(el.value) : NaN;
+      const floorVal = floor[f.key];
+      let val = isNaN(n) ? (floorVal ?? null) : n;
+      // Hard-block personal minimums from going below instructor floor
+      if (floorVal !== null && val !== null) {
+        val = f.direction === 'min'
+          ? Math.max(val, floorVal)
+          : Math.min(val, floorVal);
       }
-      return val;
-    }
-    return {
-      minVis:    parseMins('minVis',    DEFAULT_MINS.minVis),
-      minCeil:   parseMins('minCeil',   DEFAULT_MINS.minCeil),
-      maxXwd:    parseMins('maxXwd',    DEFAULT_MINS.maxXwd),
-      maxGust:   parseMins('maxGust',   DEFAULT_MINS.maxGust),
-      cautionDA: parseMins('cautionDA', DEFAULT_MINS.cautionDA),
-      noGoDA:    parseMins('noGoDA',    DEFAULT_MINS.noGoDA),
-    };
+      result[f.key] = val;
+    });
+
+    // Legacy field aliases for compatibility with analyzeConditions in Code.gs
+    result.minVisibilitySM    = result.minVis;
+    result.minCeilingFt       = result.minCeil;
+    result.maxCrosswindKts    = result.maxXwd;
+    result.maxGustKts         = result.maxGust;
+    result.cautionDensityAlt  = result.cautionDA;
+    result.noGoDensityAlt     = result.noGoDA;
+    result.faaMinVisibilitySM = FAA_MINIMUMS[mode]?.minVis ?? 3;
+    result.faaMinCeilingFt    = FAA_MINIMUMS[mode]?.minCeil ?? 1000;
+
+    return result;
   }
 
   // ── TIME HELPERS ──
@@ -2569,6 +2829,8 @@
         maxGust:          mins.maxGust,
         cautionDA:        mins.cautionDA,
         noGoDA:           mins.noGoDA,
+        maxTotalWind:     mins.maxTotalWind  ?? '',
+        maxPressureAlt:   mins.maxPressureAlt ?? '',
       });
 
       const res  = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
@@ -2991,14 +3253,23 @@
       const xwdStatus    = a.crosswind === null ? 'N/A' : (a.crosswind <= a.maxCrosswindKts ? 'PASS' : 'FAIL');
 
       // ── Personal minimums rows ──
+      const totalWindSpeed = a.windSpeed ?? null;
+      const totalWindPass  = !a.maxTotalWindKts ? 'N/A'
+                           : totalWindSpeed === null ? 'N/A'
+                           : totalWindSpeed <= a.maxTotalWindKts ? 'PASS' : 'FAIL';
+      const fieldElev      = daResult?.elevationFt ?? null;
+      const pressAltPass   = !a.maxPressureAltFt ? 'N/A'
+                           : fieldElev !== null && fieldElev > a.maxPressureAltFt ? 'FAIL' : 'PASS';
       const mins = [
-        { k: `VIS ≥${a.minVisibilitySM}SM`,  v: a.visibility !== null && !isNaN(a.visibility) ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A' },
-        { k: `CEIL ≥${a.minCeilingFt}ft`,    v: ceilingPass ? 'PASS' : 'FAIL' },
-        { k: `XWD ≤${a.maxCrosswindKts}kts`, v: xwdStatus },
-        { k: `GUST ≤${a.maxGustKts}kts`,     v: gustVal },
-        { k: `DA ≤${a.noGoDensityAlt}ft`,    v: daPass },
-        { k: 'WX SEVERITY',                   v: wxVal },
-        { k: 'FAA VFR',                        v: flightRules === 'IFR' ? 'N/A' : (a.faaVfrGo ? 'LEGAL' : 'ILLEGAL') },
+        { k: `VIS ≥${a.minVisibilitySM}SM`,    v: a.visibility !== null && !isNaN(a.visibility) ? (a.visibility >= a.minVisibilitySM ? 'PASS' : 'FAIL') : 'N/A' },
+        { k: `CEIL ≥${a.minCeilingFt}ft`,      v: ceilingPass ? 'PASS' : 'FAIL' },
+        { k: `XWD ≤${a.maxCrosswindKts}kts`,   v: xwdStatus },
+        { k: `GUST ≤${a.maxGustKts}kts`,       v: gustVal },
+        { k: a.maxTotalWindKts ? `WIND ≤${a.maxTotalWindKts}kts` : 'WIND', v: totalWindPass },
+        { k: `DA ≤${a.noGoDensityAlt}ft`,      v: daPass },
+        { k: a.maxPressureAltFt ? `PALT ≤${a.maxPressureAltFt}ft` : 'PALT', v: pressAltPass },
+        { k: 'WX SEVERITY',                     v: wxVal },
+        { k: 'FAA VFR',                         v: flightRules === 'IFR' ? 'N/A' : (a.faaVfrGo ? 'LEGAL' : 'ILLEGAL') },
       ];
       const minHtml = mins.map(m => {
         const cls = m.v === 'PASS' || m.v === 'LEGAL'     ? 'min-pass'
