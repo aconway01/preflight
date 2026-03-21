@@ -3501,8 +3501,11 @@
       html += `<div class="route-section">
         <div class="route-section-label">CONVECTIVE SIGMETs (${ri.convectiveSigmets.length} active — hard no-go VFR)</div>`;
       for (const s of ri.convectiveSigmets) {
-        const altStr = (s.base !== null && s.top !== null) ? ` · ${s.base}–${s.top}ft` : '';
-        html += `<div class="route-advisory nogo">❌ ${s.hazard || 'CONVECTIVE SIGMET'}${altStr}${s.validTo ? ' — valid to ' + formatUtcForDisplay(s.validTo) : ''}</div>`;
+        const topsStr = s.top ? ` · Tops FL${Math.round(s.top/100)}` : '';
+        const mvStr   = (s.movementDir !== null && s.movementSpd !== null)
+          ? ` · Moving ${String(s.movementDir).padStart(3,'0')}° @ ${s.movementSpd}kts` : '';
+        const validStr = s.validTo ? ` · Valid to ${formatUtcForDisplay(s.validTo)}` : '';
+        html += `<div class="route-advisory nogo">❌ CONVECTIVE SIGMET${topsStr}${mvStr}${validStr}</div>`;
         if (s.rawText) html += `<div class="pirep-raw">${s.rawText}</div>`;
       }
       html += `</div>`;
