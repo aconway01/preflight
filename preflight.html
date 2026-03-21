@@ -985,17 +985,43 @@
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 20px 24px;
       margin-bottom: 20px;
+      overflow: hidden;
     }
+    .route-panel-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 24px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .route-panel-header:hover { background: rgba(200,164,77,0.03); }
+    .route-panel-toggle {
+      font-size: 10px; color: var(--gold); opacity: 0.6;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .route-panel.open .route-panel-toggle { transform: rotate(90deg); }
     .route-panel-title {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 10px; letter-spacing: 2px;
       text-transform: uppercase; color: var(--gold);
-      margin-bottom: 16px;
-      display: flex; align-items: center; gap: 10px;
+      flex: 1;
     }
-    .route-panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .route-panel-title::after { display: none; }
+    .route-panel-status {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 0.5px;
+      color: var(--slate); opacity: 0.7;
+      white-space: nowrap;
+    }
+    .route-panel-status.warn   { color: #FCD34D; opacity: 1; }
+    .route-panel-status.nogo   { color: #F87171; opacity: 1; }
+    .route-panel-status.pass   { color: #4ADE80; opacity: 1; }
+    .route-panel-body {
+      padding: 0 24px 20px;
+      display: none;
+    }
+    .route-panel.open .route-panel-body { display: block; }
     .route-section {
       margin-bottom: 16px; padding-bottom: 16px;
       border-bottom: 1px solid rgba(200,164,77,0.08);
@@ -1441,6 +1467,10 @@
       .raw-section { border-top: 1px solid #ddd; }
       /* ── Route Panel ── */
       .route-panel { display: block !important; background: white; border: 1px solid #ccc; margin-bottom: 12px; }
+      .route-panel-body { display: block !important; }
+      .route-panel-toggle { display: none !important; }
+      .route-panel-status { display: none !important; }
+      .route-panel-header { padding: 10px 16px; cursor: default; }
       .route-panel-title { color: #333 !important; opacity: 1; }
       .route-section { border-bottom-color: #ddd; }
       .route-section-label { color: #555 !important; }
@@ -3232,9 +3262,37 @@
   // ── ROUTE INTELLIGENCE PANEL ──
   function buildRoutePanel(ri, leg, tz, nightLandingsCount) {
     const el = document.createElement('div');
-    el.className = 'route-panel';
+    el.className = 'route-panel'; // starts closed — body hidden by CSS
 
-    let html = `<div class="route-panel-title">Route Intelligence — ${leg.departure} → ${leg.arrival}</div>`;
+    // ── Derive worst advisory for collapsed status line ──
+    let statusText = 'No advisories';
+    let statusCls  = 'pass';
+
+    if (ri.conusWarning) {
+      statusText = 'Route exits CONUS'; statusCls = 'nogo';
+    } else {
+      // Check SFRAs for proximity alerts (not inside notes)
+      const proxAlerts = (ri.sfras || []).filter(s => !s.inside);
+      const hasNogo    = proxAlerts.some(s => s.severity === 'nogo') ||
+                         (ri.terrain || []).some(t => t.severity === 'nogo');
+      const hasWarn    = proxAlerts.length > 0 || (ri.terrain || []).length > 0 ||
+                         (ri.hemispheric && !ri.hemispheric.pass);
+      const hasSfraInside = (ri.sfras || []).some(s => s.inside);
+
+      if (hasNogo)        { statusText = 'Airspace alert'; statusCls = 'nogo'; }
+      else if (hasWarn)   { statusText = 'Advisories present'; statusCls = 'warn'; }
+      else if (hasSfraInside) { statusText = 'Operating in SFRA'; statusCls = 'warn'; }
+      else if (ri.windsAloft) { statusText = `Winds ${ri.windsAloft.forecastCycle || ''}Z cycle`; statusCls = ''; }
+    }
+
+    let html = `
+      <div class="route-panel-header">
+        <span class="route-panel-toggle">▶</span>
+        <span class="route-panel-title">Route Intelligence — ${leg.departure} → ${leg.arrival}</span>
+        <span class="route-panel-status ${statusCls}">${statusText}</span>
+      </div>
+      <div class="route-panel-body">
+    `;
 
     // ── CONUS Warning ──
     if (ri.conusWarning) {
@@ -3362,19 +3420,43 @@
 
     // ── SFRAs / Prohibited Areas ──
     if (ri.sfras && ri.sfras.length > 0) {
-      html += `<div class="route-section">
-        <div class="route-section-label">Special Use Airspace — Proximity Alert</div>`;
-      for (const s of ri.sfras) {
-        const cls      = s.severity === 'nogo' ? 'nogo' : 'warn';
-        const icon     = s.severity === 'nogo' ? '❌' : '⚠';
-        const distDesc = s.nearEnd === 'en route'
-          ? `${s.distNm}nm from route`
-          : `${s.distNm}nm from ${s.nearEnd}`;
-        html += `<div class="route-advisory ${cls}">${icon} ${s.name} — ${distDesc}
-          <div class="advisory-note">${s.note}</div>
+      // Separate inside-SFRA info notes from proximity warnings
+      const insideAlerts = ri.sfras.filter(s => s.inside);
+      const proximityAlerts = ri.sfras.filter(s => !s.inside);
+
+      if (proximityAlerts.length > 0) {
+        html += `<div class="route-section">
+          <div class="route-section-label">Special Use Airspace — Proximity Alert</div>`;
+        for (const s of proximityAlerts) {
+          const cls      = s.severity === 'nogo' ? 'nogo' : 'warn';
+          const icon     = s.severity === 'nogo' ? '❌' : '⚠';
+          const distDesc = s.nearEnd === 'en route'
+            ? `${s.distNm}nm from route`
+            : `${s.distNm}nm from ${s.nearEnd}`;
+          html += `<div class="route-advisory ${cls}">${icon} ${s.name} — ${distDesc}
+            <div class="advisory-note">${s.note}</div>
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
+      if (insideAlerts.length > 0) {
+        html += `<div class="route-section">
+          <div class="route-section-label">Special Use Airspace — Active</div>`;
+        for (const s of insideAlerts) {
+          html += `<div class="route-advisory warn">ℹ ${s.name} — flight operates within this airspace
+            <div class="advisory-note">${s.note}</div>
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
+      if (insideAlerts.length === 0 && proximityAlerts.length === 0) {
+        html += `<div class="route-section">
+          <div class="route-section-label">Special Use Airspace</div>
+          <div class="route-advisory pass">✅ No permanent SFRAs within warning range of route</div>
         </div>`;
       }
-      html += `</div>`;
     } else {
       html += `<div class="route-section">
         <div class="route-section-label">Special Use Airspace</div>
@@ -3477,7 +3559,15 @@
       </div>`;
     }
 
+    html += `</div>`; // close route-panel-body
+
     el.innerHTML = html;
+
+    // Wire toggle via addEventListener to avoid inline onclick scope issues
+    el.querySelector('.route-panel-header').addEventListener('click', () => {
+      el.classList.toggle('open');
+    });
+
     return el;
   }
 
@@ -3630,7 +3720,10 @@
             <span class="time-tag">${timeDisplay}</span>
           </div>
           ${periodLabelHtml}
-          ${recBadge}${nightBadge}
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            ${recBadge.replace('margin-bottom:10px;', '')}
+            ${nightBadge.replace('margin-bottom:10px;', '')}
+          </div>
           ${staleMetarHtml}
           <div class="concerns-block" style="margin-bottom:12px;">
             <div class="block-title">Concerns</div>
@@ -4081,15 +4174,26 @@
 
         // SFRAs
         if (ri.sfras && ri.sfras.length > 0) {
-          lines.push(`Special Use Airspace Alerts (${ri.sfras.length}):`);
-          ri.sfras.forEach(s => {
-            const icon     = s.severity === 'nogo' ? '❌' : '⚠';
-            const distDesc = s.nearEnd === 'en route'
-              ? `${s.distNm}nm from route`
-              : `${s.distNm}nm from ${s.nearEnd}`;
-            lines.push(`  ${icon} ${s.name} — ${distDesc}`);
-            lines.push(`     ${s.note}`);
-          });
+          const insideAlerts   = ri.sfras.filter(s => s.inside);
+          const proxAlerts     = ri.sfras.filter(s => !s.inside);
+          if (proxAlerts.length > 0) {
+            lines.push(`Special Use Airspace — Proximity (${proxAlerts.length}):`);
+            proxAlerts.forEach(s => {
+              const icon     = s.severity === 'nogo' ? '❌' : '⚠';
+              const distDesc = s.nearEnd === 'en route'
+                ? `${s.distNm}nm from route`
+                : `${s.distNm}nm from ${s.nearEnd}`;
+              lines.push(`  ${icon} ${s.name} — ${distDesc}`);
+              lines.push(`     ${s.note}`);
+            });
+          }
+          if (insideAlerts.length > 0) {
+            lines.push(`Special Use Airspace — Active:`);
+            insideAlerts.forEach(s => {
+              lines.push(`  ℹ ${s.name} — flight operates within this airspace`);
+              lines.push(`     ${s.note}`);
+            });
+          }
         } else {
           lines.push('Special Use Airspace: No permanent SFRAs within warning range');
         }
