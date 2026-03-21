@@ -3161,6 +3161,19 @@
     legReports.innerHTML = '';
 
     const allRecs = data.legs.flatMap(l => l.reports.map(r => r.recommendation));
+
+    // Convective SIGMETs are a hard no-go — override trip rec regardless of station conditions
+    const hasConvectiveSigmet = data.legs.some(l =>
+      l.routeIntelligence?.convectiveSigmets?.length > 0
+    );
+    if (hasConvectiveSigmet) allRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
+
+    // Active SIGMETs (non-convective) on route drive minimum caution
+    const hasSigmet = data.legs.some(l =>
+      l.routeIntelligence?.sigmets?.length > 0
+    );
+    if (hasSigmet && !hasConvectiveSigmet) allRecs.push('GO WITH CAUTION — SIGMET ACTIVE ON ROUTE');
+
     const tripRec = deriveTripRec(allRecs);
 
     verdict.className = 'trip-verdict ' + tripClass(tripRec);
@@ -3172,7 +3185,11 @@
       `  ·  ${new Date().toLocaleString('en-US', { timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:false })} ${tzAbbr(tz)}`;
 
     data.legs.forEach((leg, i) => {
-      const legRec  = deriveTripRec(leg.reports.map(r => r.recommendation));
+      const legStationRecs = leg.reports.map(r => r.recommendation);
+      if (leg.routeIntelligence?.convectiveSigmets?.length > 0) {
+        legStationRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
+      }
+      const legRec  = deriveTripRec(legStationRecs);
       const recCls  = tripClass(legRec);
 
       const depDisplay = legs[i].flightMin
