@@ -525,10 +525,17 @@
     .mins-status {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
-      flex: 1;
+      flex: 1; min-width: 100px;
     }
     .mins-status.unsaved { color: #FBBF24; }
     .mins-status.saved   { color: #4ADE80; }
+    @media (max-width: 480px) {
+      .mins-actions {
+        flex-direction: column; align-items: stretch; gap: 8px;
+      }
+      .mins-status { text-align: center; min-width: 0; }
+      .mins-reset, .mins-save { width: 100%; text-align: center; }
+    }
 
     /* Personal minimums input cells — match readonly grid style but editable */
     .mins-input-cell {
@@ -804,6 +811,10 @@
     .leg-field input[type="datetime-local"]:focus,
     .leg-field input[type="number"]:focus {
       border-color: var(--gold);
+    }
+    .leg-field input[type="number"]::placeholder {
+      color: rgba(148,163,184,0.35);
+      font-size: 12px;
     }
 
     .leg-arrow {
@@ -3777,6 +3788,50 @@
     const route = window._lastLegs.map(l => `${l.departure}→${l.arrival}`).join(' · ');
 
     lines.push('CENTRAL AVIATION — PREFLIGHT REPORT');
+    lines.push('═'.repeat(50));
+
+    // ── Logbook Summary ──
+    // Compact block formatted for easy logbook transcription
+    lines.push('LOGBOOK SUMMARY');
+    lines.push('-'.repeat(50));
+    const picName0    = document.getElementById('picName')?.value?.trim()    || '—';
+    const flightDate0 = document.getElementById('flightDate')?.value         || '—';
+    const frLabel0    = flightRules === 'SOLO' ? 'VFR — Student Solo' : flightRules;
+
+    // Per-leg summary
+    window._lastLegs.forEach((leg, i) => {
+      const depStr  = leg.departure || '?';
+      const arrStr  = leg.arrival   || '?';
+      const legMins = leg.flightMin || null;
+      const legHrs  = legMins ? (legMins / 60).toFixed(1) : '—';
+      const cruiseStr = leg.cruiseAltFt ? `${(leg.cruiseAltFt/1000).toFixed(1)}k ft` : '—';
+      lines.push(`  Leg ${i+1}:  ${depStr} → ${arrStr}   Est. ${legHrs} hrs   Cruise: ${cruiseStr}`);
+    });
+
+    // Total estimated flight time
+    const totalMins = window._lastLegs.reduce((sum, l) => sum + (l.flightMin || 0), 0);
+    const totalHrs  = totalMins > 0 ? (totalMins / 60).toFixed(1) : '—';
+
+    lines.push('');
+    lines.push(`  Date:         ${flightDate0}`);
+    lines.push(`  PIC:          ${picName0}`);
+    lines.push(`  Flight Rules: ${frLabel0}`);
+    lines.push(`  Total Est:    ${totalHrs} hrs`);
+    lines.push(`  Aircraft:     — (pending aircraft profile)`);
+
+    // Remarks — occupants, night legs, IFR
+    const occupants0 = getOccupants();
+    if (occupants0.length > 0) {
+      const occStr = occupants0.map(o => `${o.role || 'Occupant'}: ${o.name}`).join(', ');
+      lines.push(`  Remarks:      ${occStr}`);
+    }
+    if (flightRules === 'IFR') {
+      lines.push(`  Instrument:   IFR flight — log actual/simulated instrument time separately`);
+    }
+    if (flightRules === 'SOLO') {
+      lines.push(`  Solo:         Student solo — log as solo PIC time`);
+    }
+    lines.push('');
     lines.push('═'.repeat(50));
 
     // ── Flight Info ──
