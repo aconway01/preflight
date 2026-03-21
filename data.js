@@ -326,7 +326,7 @@ const CA_DATA = {
       category: 'Forecast Currency',
       severity: 'info',
       items: [
-        { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (00Z, 06Z, 12Z, or 18Z) based on the current UTC time. The active cycle is shown next to the winds aloft station label. Winds aloft data covers 3,000–18,000ft only (level=low).' },
+        { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (24Z, 06Z, 12Z, or 18Z) based on the current UTC time. The active cycle is shown next to the winds aloft station label. Winds aloft data covers 3,000–18,000ft only (level=low).' },
         { title: 'Advisory Cache TTLs',         detail: 'G-AIRMETs are cached 15 minutes, SIGMETs 10 minutes, PIREPs 5 minutes. An advisory issued immediately after a cache refresh will not appear until the TTL expires. In rapidly developing convective situations, re-request the briefing.' },
         { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will use night minimums for the arrival analysis. However, the minimums panel tab must be manually set to VFR Night (or Solo Night) to edit personal night minimums before requesting the brief — the active panel tab at brief generation is recorded in the report.' },
       ],
