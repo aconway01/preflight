@@ -261,14 +261,14 @@ const CA_DATA = {
 
   // ── Minimums Field Definitions ──
   MINIMUMS_FIELDS: [
-    { key: 'minVis',         label: 'Min Visibility',   unit: 'SM',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'minCeil',        label: 'Min Ceiling',      unit: 'ft',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'maxXwd',         label: 'Max Crosswind',    unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'maxTotalWind',   label: 'Max Total Wind',   unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'maxGust',        label: 'Max Gusts',        unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'cautionDA',      label: 'DA Caution',       unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'noGoDA',         label: 'DA No-Go',         unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'] },
-    { key: 'maxPressureAlt', label: 'Max Pressure Alt', unit: 'ft',  direction: 'max', modes: ['vfr_night','ifr','solo_night'] },
+    { key: 'minVis',         label: 'Min Visibility',   unit: 'SM',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'FAR 91.155 — 3SM minimum for Class B/C/D/E. Class G day: 1SM below 1,200ft AGL.' },
+    { key: 'minCeil',        label: 'Min Ceiling',      unit: 'ft',  direction: 'min', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'Derived from FAR 91.155 cloud clearance rules (1,000ft above / 500ft below / 2,000ft horizontal). No explicit FAR ceiling floor for VFR.' },
+    { key: 'maxXwd',         label: 'Max Crosswind',    unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'No FAR limit. School/instructor policy below POH demonstrated crosswind component.' },
+    { key: 'maxTotalWind',   label: 'Max Total Wind',   unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'No FAR limit. School/instructor policy. Combined headwind + crosswind envelope.' },
+    { key: 'maxGust',        label: 'Max Gusts',        unit: 'kts', direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'No FAR limit. School/instructor policy. Gust factor affects control authority during landing flare.' },
+    { key: 'cautionDA',      label: 'DA Caution',       unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'No FAR-mandated VFR DA limit. School policy. High DA degrades climb, extends takeoff roll, reduces service ceiling.' },
+    { key: 'noGoDA',         label: 'DA No-Go',         unit: 'ft',  direction: 'max', modes: ['vfr_day','vfr_night','ifr','solo_day','solo_night'], tip: 'No FAR-mandated VFR DA limit. School policy hard stop above this density altitude.' },
+    { key: 'maxPressureAlt', label: 'Max Pressure Alt', unit: 'ft',  direction: 'max', modes: ['vfr_night','ifr','solo_night'],                      tip: 'FAR 91.211 — O₂ required: crew >12,500ft MSL for >30min; crew >14,000ft always; all occupants >15,000ft. Uses pressure altitude.' },
   ],
 
   // ── Timezone Abbreviations ──
