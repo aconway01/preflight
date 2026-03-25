@@ -434,6 +434,68 @@
       margin-top: 6px; line-height: 1.5;
     }
 
+    /* Regulatory reference toggle */
+    .mins-reg-toggle {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate); opacity: 0.5;
+      cursor: pointer; margin-top: 10px;
+      display: flex; align-items: center; gap: 6px;
+      user-select: none;
+      transition: opacity 0.2s;
+    }
+    .mins-reg-toggle:hover { opacity: 0.9; }
+    .mins-reg-toggle.open { opacity: 0.8; }
+    .mins-reg-toggle.open .mins-reg-arrow { transform: rotate(90deg); }
+    .mins-reg-arrow { font-size: 8px; transition: transform 0.2s; display: inline-block; }
+    .mins-reg-body {
+      margin-top: 8px;
+      border-left: 2px solid rgba(200,164,77,0.15);
+      padding-left: 12px;
+    }
+    .mins-reg-item {
+      margin-bottom: 8px; padding-bottom: 8px;
+      border-bottom: 1px solid rgba(200,164,77,0.06);
+    }
+    .mins-reg-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .mins-reg-field {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--gold); opacity: 0.7;
+      display: block; margin-bottom: 2px;
+    }
+    .mins-reg-note {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10px; color: var(--slate); opacity: 0.7;
+      line-height: 1.5;
+    }
+
+    /* Field label tooltips — desktop only */
+    .mins-cell-label {
+      position: relative; cursor: default;
+    }
+    .mins-cell-label[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%);
+      background: #1a2f50; color: var(--slate-light);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 10px; line-height: 1.4;
+      padding: 6px 10px; border-radius: 4px;
+      border: 1px solid rgba(200,164,77,0.2);
+      white-space: normal; width: 220px;
+      z-index: 100; pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .mins-cell-label[data-tip]:hover::before {
+      content: '';
+      position: absolute; bottom: calc(100% + 1px); left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(200,164,77,0.2);
+      z-index: 101; pointer-events: none;
+    }
+
     /* Read-only tier grids (FAA + Instructor) */
     .mins-readonly-grid {
       display: grid;
@@ -654,12 +716,13 @@
 
     .solo-locked-note {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 9px; color: var(--amber);
+      font-size: 9px; color: var(--slate);
       letter-spacing: 0.5px; margin-top: 8px;
-      padding: 5px 10px;
-      background: rgba(217,119,6,0.08);
-      border: 1px solid rgba(217,119,6,0.2);
-      border-radius: 4px; display: none;
+      padding: 6px 10px 6px 12px;
+      background: rgba(200,164,77,0.04);
+      border-left: 2px solid rgba(200,164,77,0.35);
+      border-radius: 0 4px 4px 0; display: none;
+      line-height: 1.5;
     }
     /* ── FLIGHT RULES BUTTONS ── */
     .flight-rules-btns {
@@ -1502,6 +1565,8 @@
       .mins-field input     { background: #f5f5f5 !important; color: #111 !important; border-color: #ccc !important; }
       .mins-field label     { color: #555 !important; }
       .mins-reset, .mins-save, .mins-actions { display: none !important; }
+      .mins-reg-toggle { display: none !important; }
+      .mins-reg-body   { display: none !important; }
       .mins-input-cell   { background: #f5f5f5 !important; border-color: #ddd !important; }
       .mins-input-cell-label { color: #666 !important; opacity: 1; }
       .mins-input-cell input { color: #111 !important; }
@@ -1958,6 +2023,41 @@
         </div>
         <div class="mins-ifr-note" id="minsClassGNote" style="display:none;">
           Class G uncontrolled airspace allows lower minimums (1SM day / 3SM night below 1,200ft AGL). Values shown apply to Class B/C/D/E airspace — verify sectional chart for your route.
+        </div>
+
+        <!-- Regulatory reference — collapsed by default -->
+        <div class="mins-reg-toggle" id="minsRegToggle">
+          <span class="mins-reg-arrow">▶</span> § Regulatory Reference
+        </div>
+        <div class="mins-reg-body" id="minsRegBody" style="display:none;">
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">Min Visibility</span>
+            <span class="mins-reg-note">FAR 91.155 — VFR cloud clearance and visibility requirements by airspace class. 3SM applies to Class B/C/D/E airspace. Class G day minimum is 1SM below 1,200ft AGL. Student solo requires 3SM per FAR 61.89.</span>
+          </div>
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">Min Ceiling</span>
+            <span class="mins-reg-note">FAR 91.155 — No explicit VFR ceiling floor, but derived from the 1,000ft above / 500ft below / 2,000ft horizontal cloud clearance rule. The value shown is the practical minimum for safe VFR operations above the required clearance.</span>
+          </div>
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">Max Crosswind</span>
+            <span class="mins-reg-note">No FAR-mandated limit. The demonstrated crosswind component from the POH establishes the aircraft limit. School and instructor minimums enforce operational limits below the demonstrated maximum.</span>
+          </div>
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">Max Total Wind</span>
+            <span class="mins-reg-note">No FAR-mandated limit. School and instructor policy. Total wind includes both headwind and crosswind components. Sets an overall wind envelope for student and solo operations.</span>
+          </div>
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">Max Gust</span>
+            <span class="mins-reg-note">No FAR-mandated limit. School and instructor policy. Gust factor (gust speed minus steady wind speed) affects aircraft control authority, especially during landing flare. POH structural limits apply separately.</span>
+          </div>
+          <div class="mins-reg-item">
+            <span class="mins-reg-field">DA Caution / No-Go</span>
+            <span class="mins-reg-note">No FAR-mandated VFR density altitude limit. School and instructor policy. High density altitude degrades climb performance, extends takeoff roll, and reduces service ceiling. Configured in instructor minimums — not aircraft-specific until Phase 3.</span>
+          </div>
+          <div class="mins-reg-item" id="minsRegPalt" style="display:none;">
+            <span class="mins-reg-field">Max Pressure Alt</span>
+            <span class="mins-reg-note">FAR 91.211 — Supplemental oxygen required: crew above 12,500ft MSL for more than 30 minutes; crew above 14,000ft MSL at all times; all occupants above 15,000ft MSL. Pressure altitude (not MSL) is used since the O2 rules reference the pressure environment, not terrain elevation. The tool flags caution at 12,500ft and no-go at 14,000ft by default.</span>
+          </div>
         </div>
       </div>
 
@@ -2433,6 +2533,17 @@
   document.getElementById('minsResetBtn').addEventListener('click', resetMinimums);
   document.getElementById('minsSaveBtn').addEventListener('click', saveMinimums);
 
+  // Wire regulatory reference toggle
+  const regToggle = document.getElementById('minsRegToggle');
+  const regBody   = document.getElementById('minsRegBody');
+  if (regToggle && regBody) {
+    regToggle.addEventListener('click', () => {
+      const open = regBody.style.display !== 'none';
+      regBody.style.display = open ? 'none' : 'block';
+      regToggle.classList.toggle('open', !open);
+    });
+  }
+
   // Initialize status
   updateMinsStatus();
 
@@ -2482,8 +2593,9 @@
         const display = (val === null || val === undefined)
           ? `<span class="mins-readonly-cell-value n-a">—</span>`
           : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
+        const tipAttr = f.tip ? ` data-tip="${f.tip.replace(/"/g, '&quot;')}"` : '';
         return `<div class="mins-readonly-cell">
-          <div class="mins-readonly-cell-label">${f.label}</div>
+          <div class="mins-readonly-cell-label mins-cell-label"${tipAttr}>${f.label}</div>
           ${display}
         </div>`;
       }).join('');
@@ -2491,6 +2603,10 @@
     if (ifrNote)    ifrNote.style.display    = isIFR ? '' : 'none';
     const classGNote = document.getElementById('minsClassGNote');
     if (classGNote) classGNote.style.display = (mode === 'vfr_day' || mode === 'vfr_night') ? '' : 'none';
+
+    // Show pressure alt regulatory note only for modes that include it
+    const paltReg = document.getElementById('minsRegPalt');
+    if (paltReg) paltReg.style.display = fields.some(f => f.key === 'maxPressureAlt') ? '' : 'none';
 
     // ── Instructor tier ──
     const instrGrid = document.getElementById('minsGridInstr');
