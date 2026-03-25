@@ -524,6 +524,27 @@
       font-size: 11px; opacity: 0.4;
     }
 
+    /* Secondary mode tier — shown in web app alongside active mode */
+    .mins-tier-secondary {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(200,164,77,0.1);
+    }
+    .mins-tier-secondary .mins-tier-name { color: var(--slate); }
+    .mins-tier-secondary .mins-tier-desc { opacity: 0.5; }
+
+    /* Print all-modes block */
+    .mins-print-mode-block {
+      margin-bottom: 14px; padding-bottom: 14px;
+      border-bottom: 1px solid #eee;
+    }
+    .mins-print-mode-block:last-child { border-bottom: none; margin-bottom: 0; }
+    .mins-print-mode-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: #555; margin-bottom: 6px; font-weight: 600;
+    }
+
     .mins-inputs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -1559,6 +1580,9 @@
       .mins-tier            { border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 10px; }
       .mins-tier-name       { color: #333 !important; opacity: 1; }
       .mins-tier-desc       { color: #666 !important; opacity: 1; }
+      /* In print, hide the interactive tiers and show the static all-modes snapshot */
+      #minsTierFAA, #minsTierInstr, #minsTierPersonal, #minsSoloNote { display: none !important; }
+      #minsPrintAllModes    { display: block !important; }
       .mins-readonly-cell   { background: #f5f5f5 !important; border-color: #ddd !important; }
       .mins-readonly-cell-label { color: #666 !important; opacity: 1; }
       .mins-readonly-cell-value { color: #111 !important; }
@@ -2085,6 +2109,9 @@
       </div>
 
       <div class="solo-locked-note" id="minsSoloNote" style="display:none;"></div>
+
+      <!-- Print-only: all relevant modes rendered as static grids -->
+      <div id="minsPrintAllModes" style="display:none;"></div>
 
     </div>
   </div>
@@ -2670,6 +2697,100 @@
       minsInputs._floorListenerAdded = true;
     }
     updateMinsStatus();
+
+    // ── Secondary mode tier (web app) ──
+    // Show companion night/day tier alongside active one — read-only reference.
+    const flightRulesVal = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
+    const companionMode  = mode === 'vfr_day'    ? 'vfr_night'
+                         : mode === 'vfr_night'  ? 'vfr_day'
+                         : mode === 'solo_day'   ? 'solo_night'
+                         : mode === 'solo_night' ? 'solo_day'
+                         : null;
+
+    document.querySelectorAll('.mins-tier-secondary').forEach(el => el.remove());
+
+    if (companionMode) {
+      const compFloor  = resolveInstructorFloor(companionMode, null, null);
+      const compSaved  = getMinimumsByMode(companionMode);
+      const compFields = MINIMUMS_FIELDS.filter(f => f.modes.includes(companionMode));
+      const compLabel  = companionMode.replace('_', ' ').toUpperCase();
+      const isNightComp = companionMode.includes('night');
+      const faaComp    = FAA_MINIMUMS[companionMode] || {};
+
+      const buildGrid = vals => compFields.map(f => {
+        const val = vals[f.key];
+        const display = (val === null || val === undefined)
+          ? `<span class="mins-readonly-cell-value n-a">—</span>`
+          : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
+        const tipAttr = f.tip ? ` data-tip="${f.tip.replace(/"/g, '&quot;')}"` : '';
+        return `<div class="mins-readonly-cell">
+          <div class="mins-readonly-cell-label mins-cell-label"${tipAttr}>${f.label}</div>
+          ${display}
+        </div>`;
+      }).join('');
+
+      const secTier = document.createElement('div');
+      secTier.className = 'mins-tier-secondary';
+      secTier.innerHTML = `
+        <div class="mins-tier-label" style="margin-bottom:12px;">
+          <span class="mins-tier-name">${compLabel}</span>
+          <span class="mins-tier-desc">${isNightComp ? 'Night' : 'Day'} minimums — read-only reference</span>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">FAA</div>
+          <div class="mins-readonly-grid">${buildGrid(faaComp)}</div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">Instructor</div>
+          <div class="mins-readonly-grid">${buildGrid(compFloor)}</div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">Personal (Saved)</div>
+          <div class="mins-readonly-grid">${buildGrid(compSaved)}</div>
+        </div>`;
+      const personalTier = document.getElementById('minsTierPersonal');
+      if (personalTier) personalTier.after(secTier);
+    }
+
+    // ── Print all-modes snapshot ──
+    const printContainer = document.getElementById('minsPrintAllModes');
+    if (printContainer) {
+      const isIFRPrint  = flightRulesVal === 'IFR';
+      const isSoloPrint = flightRulesVal === 'SOLO';
+      const printModes  = isIFRPrint  ? ['ifr']
+                        : isSoloPrint ? ['solo_day', 'solo_night']
+                        :               ['vfr_day',  'vfr_night'];
+      printContainer.innerHTML = printModes.map(pm => {
+        const pmLabel  = pm.replace('_', ' ').toUpperCase();
+        const pmFields = MINIMUMS_FIELDS.filter(f => f.modes.includes(pm));
+        const pmFaa    = FAA_MINIMUMS[pm] || {};
+        const pmInstr  = resolveInstructorFloor(pm, null, null);
+        const pmPers   = getMinimumsByMode(pm);
+        const buildPrintGrid = vals => pmFields.map(f => {
+          const val = vals[f.key];
+          const display = (val === null || val === undefined) ? '—' : `${val} ${f.unit}`;
+          return `<div class="mins-readonly-cell">
+            <div class="mins-readonly-cell-label">${f.label}</div>
+            <span class="mins-readonly-cell-value">${display}</span>
+          </div>`;
+        }).join('');
+        return `<div class="mins-print-mode-block">
+          <div class="mins-print-mode-label">${pmLabel}</div>
+          <div style="margin-bottom:6px;">
+            <div style="font-size:9px;color:#666;margin-bottom:3px;">FAA Minimums</div>
+            <div class="mins-readonly-grid">${buildPrintGrid(pmFaa)}</div>
+          </div>
+          <div style="margin-bottom:6px;">
+            <div style="font-size:9px;color:#666;margin-bottom:3px;">Instructor Minimums</div>
+            <div class="mins-readonly-grid">${buildPrintGrid(pmInstr)}</div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:#666;margin-bottom:3px;">Personal Minimums</div>
+            <div class="mins-readonly-grid">${buildPrintGrid(pmPers)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 
   // Enforce instructor floor on personal minimums input
@@ -4078,8 +4199,31 @@
     lines.push(`Route:        ${route}`);
     const frLabel = flightRules === 'SOLO' ? 'VFR — Student Solo' : flightRules;
     lines.push(`Flight Rules: ${frLabel}`);
-    lines.push(`Minimums:     ${_currentMinimumsMode.replace('_', ' ').toUpperCase()} (active at brief generation)`);
     lines.push(`Generated:    ${now} ${tzAbbr(tz)}`);
+    lines.push('');
+
+    // ── Personal Minimums Summary ──
+    // Always record all minimums relevant to the flight rules selection,
+    // regardless of which tab was active at brief generation.
+    const isIFRFlt  = flightRules === 'IFR';
+    const isSoloFlt = flightRules === 'SOLO';
+    const minModes  = isIFRFlt  ? ['ifr']
+                    : isSoloFlt ? ['solo_day', 'solo_night']
+                    :             ['vfr_day',  'vfr_night'];
+
+    lines.push('PERSONAL MINIMUMS');
+    lines.push('-'.repeat(50));
+    minModes.forEach(mode => {
+      const m    = getMinimumsByMode(mode);
+      const label = mode.replace('_', ' ').toUpperCase();
+      const fields = MINIMUMS_FIELDS.filter(f => f.modes.includes(mode));
+      lines.push(`  ${label}`);
+      fields.forEach(f => {
+        const val = m[f.key];
+        if (val === null || val === undefined) return;
+        lines.push(`    ${f.label.padEnd(20)} ${val} ${f.unit}`);
+      });
+    });
     lines.push('');
 
     // ── Currency ──
@@ -4215,7 +4359,19 @@
       section.push(`  CEIL ≥${a.minCeilingFt}ft`.padEnd(24)    + (ceilingPass ? 'PASS' : 'FAIL'));
       section.push(`  XWD  ≤${a.maxCrosswindKts}kts`.padEnd(24) + xwdPass);
       section.push(`  GUST ≤${a.maxGustKts}kts`.padEnd(24)     + gustVal);
+      if (a.maxTotalWindKts) {
+        const totalWindVal = a.windSpeed !== null
+          ? (a.windSpeed <= a.maxTotalWindKts ? 'PASS' : 'FAIL') : 'N/A';
+        section.push(`  WIND ≤${a.maxTotalWindKts}kts`.padEnd(24) + totalWindVal);
+      }
       section.push(`  DA   ≤${a.noGoDensityAlt}ft`.padEnd(24)  + daPass);
+      if (a.maxPressureAltFt) {
+        const daResult2   = a.densityAltitude;
+        const elevFt      = daResult2 ? daResult2.elevationFt : null;
+        const paltVal     = elevFt !== null
+          ? (elevFt > a.maxPressureAltFt ? 'FAIL' : 'PASS') : 'N/A';
+        section.push(`  PALT ≤${a.maxPressureAltFt}ft`.padEnd(24) + paltVal);
+      }
       section.push('  WX SEVERITY'.padEnd(24)                   + wxVal);
       section.push('  FAA VFR'.padEnd(24)                       + faaVfr);
       section.push('');
