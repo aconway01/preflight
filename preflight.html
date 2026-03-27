@@ -2226,6 +2226,25 @@
   const INSTRUCTORS      = CA_DATA.INSTRUCTORS;
   const MINIMUMS_FIELDS  = CA_DATA.MINIMUMS_FIELDS;
 
+  // ── SHARED HELPERS ──
+  // Hoisted here to avoid duplication between buildRoutePanel and saveReport.
+
+  // Format altitude in feet to a compact string: 0→'SFC', ≥1000→'10k ft', else '500ft'
+  const fmtAlt = ft => ft === 0 ? 'SFC' : ft >= 1000 ? `${(ft/1000).toFixed(0)}k ft` : `${ft}ft`;
+
+  // G-AIRMET hazard code → human-readable label (API values confirmed March 2026)
+  const GAIRMET_HAZARD_LABELS = {
+    'IFR':     'IFR Conditions',
+    'MT_OBSC': 'Mountain Obscuration',
+    'TURB-LO': 'Low-Level Turbulence',
+    'TURB-HI': 'High-Level Turbulence',
+    'SFC_WND': 'Surface Winds',
+    'LLWS':    'Low-Level Wind Shear',
+    'ICE':     'Icing',
+    'FZLVL':   'Freezing Level',
+    'M_FZLVL': 'Multiple Freezing Levels',
+  };
+
   // ── MINIMUMS RESOLVER ──
   // Walks the full hierarchy and returns the most restrictive value
   // at each field for the given mode, aircraft, and student.
@@ -3323,6 +3342,9 @@
         depTimeLocal: depTimeLocal,
         flightMin:    totalMin > 0 ? totalMin : null,
         cruiseAltFt,
+        // distNm computed after dep/arr coords are known from AVWX — set to null for now,
+        // populated from routeIntelligence.routeNm if available after briefing
+        distNm:       null,
       });
     }
 
@@ -3400,17 +3422,37 @@
 
     const allRecs = data.legs.flatMap(l => l.reports.map(r => r.recommendation));
 
-    // Convective SIGMETs are a hard no-go — override trip rec regardless of station conditions
+    // Convective SIGMETs are a hard no-go
     const hasConvectiveSigmet = data.legs.some(l =>
       l.routeIntelligence?.convectiveSigmets?.length > 0
     );
     if (hasConvectiveSigmet) allRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
 
-    // Active SIGMETs (non-convective) on route drive minimum caution
+    // Active SIGMETs on route drive minimum caution
     const hasSigmet = data.legs.some(l =>
       l.routeIntelligence?.sigmets?.length > 0
     );
     if (hasSigmet && !hasConvectiveSigmet) allRecs.push('GO WITH CAUTION — SIGMET ACTIVE ON ROUTE');
+
+    // CONUS boundary exit drives caution
+    const hasConus = data.legs.some(l => l.routeIntelligence?.conusWarning);
+    if (hasConus) allRecs.push('GO WITH CAUTION — ROUTE EXITS CONUS');
+
+    // Strong headwind drives concern
+    data.legs.forEach(l => {
+      const hwc = l.routeIntelligence?.headwindConcern;
+      if (hwc) allRecs.push(hwc.severity === 'nogo'
+        ? `NO-GO — HEADWIND ${hwc.component}KTS AT CRUISE`
+        : `GO WITH CAUTION — HEADWIND ${hwc.component}KTS AT CRUISE`);
+    });
+
+    // Icing concern drives concern
+    data.legs.forEach(l => {
+      const ic = l.routeIntelligence?.icingConcern;
+      if (ic) allRecs.push(ic.severity === 'nogo'
+        ? 'NO-GO — ICING RISK AT CRUISE ALTITUDE'
+        : 'GO WITH CAUTION — FREEZING LEVEL NEAR CRUISE ALTITUDE');
+    });
 
     const tripRec = deriveTripRec(allRecs);
 
@@ -3424,9 +3466,19 @@
 
     data.legs.forEach((leg, i) => {
       const legStationRecs = leg.reports.map(r => r.recommendation);
-      if (leg.routeIntelligence?.convectiveSigmets?.length > 0) {
+      const ri = leg.routeIntelligence;
+      if (ri?.convectiveSigmets?.length > 0)
         legStationRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
-      }
+      if (ri?.conusWarning)
+        legStationRecs.push('GO WITH CAUTION — ROUTE EXITS CONUS');
+      if (ri?.headwindConcern)
+        legStationRecs.push(ri.headwindConcern.severity === 'nogo'
+          ? `NO-GO — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`
+          : `GO WITH CAUTION — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`);
+      if (ri?.icingConcern)
+        legStationRecs.push(ri.icingConcern.severity === 'nogo'
+          ? 'NO-GO — ICING RISK AT CRUISE ALTITUDE'
+          : 'GO WITH CAUTION — FREEZING LEVEL NEAR CRUISE ALTITUDE');
       const legRec  = deriveTripRec(legStationRecs);
       const recCls  = tripClass(legRec);
 
@@ -3465,6 +3517,13 @@
     window._lastLegs        = legs;
     window._lastTz          = tz;
     window._lastFlightRules = flightRulesMode || flightRules;
+
+    // Back-populate distNm on legs from route intelligence
+    data.legs.forEach((leg, i) => {
+      if (legs[i] && leg.routeIntelligence && leg.routeIntelligence.routeNm) {
+        legs[i].distNm = leg.routeIntelligence.routeNm;
+      }
+    });
 
     // Auto-switch minimums panel to VFR Night if departure is at night
     // Only auto-switch if currently on VFR Day — don't override IFR or Solo
@@ -3517,7 +3576,7 @@
   // ── ROUTE INTELLIGENCE PANEL ──
   function buildRoutePanel(ri, leg, tz, nightLandingsCount) {
     const el = document.createElement('div');
-    el.className = 'route-panel'; // starts closed — body hidden by CSS
+    el.className = 'route-panel open'; // open by default — contains critical advisory info
 
     // ── Derive worst advisory for collapsed status line ──
     let statusText = 'No advisories';
@@ -3526,16 +3585,18 @@
     if (ri.conusWarning) {
       statusText = 'Route exits CONUS'; statusCls = 'nogo';
     } else {
-      // Check SFRAs for proximity alerts (not inside notes)
       const proxAlerts = (ri.sfras || []).filter(s => !s.inside);
       const hasNogo    = proxAlerts.some(s => s.severity === 'nogo') ||
-                         (ri.terrain || []).some(t => t.severity === 'nogo');
+                         (ri.terrain || []).some(t => t.severity === 'nogo') ||
+                         (ri.headwindConcern && ri.headwindConcern.severity === 'nogo') ||
+                         (ri.icingConcern   && ri.icingConcern.severity   === 'nogo');
       const hasWarn    = proxAlerts.length > 0 || (ri.terrain || []).length > 0 ||
-                         (ri.hemispheric && !ri.hemispheric.pass);
+                         (ri.hemispheric && !ri.hemispheric.pass) ||
+                         ri.headwindConcern || ri.icingConcern;
       const hasSfraInside = (ri.sfras || []).some(s => s.inside);
 
-      if (hasNogo)        { statusText = 'Airspace alert'; statusCls = 'nogo'; }
-      else if (hasWarn)   { statusText = 'Advisories present'; statusCls = 'warn'; }
+      if (hasNogo)          { statusText = 'Airspace/wind alert'; statusCls = 'nogo'; }
+      else if (hasWarn)     { statusText = 'Advisories present';  statusCls = 'warn'; }
       else if (hasSfraInside) { statusText = 'Operating in SFRA'; statusCls = 'warn'; }
       else if (ri.windsAloft) { statusText = `Winds ${ri.windsAloft.forecastCycle || ''}Z cycle`; statusCls = ''; }
     }
@@ -3556,6 +3617,20 @@
       </div>`;
     }
 
+    // ── Headwind / Icing Concerns ──
+    if (ri.headwindConcern || ri.icingConcern) {
+      html += `<div class="route-section">`;
+      if (ri.headwindConcern) {
+        const cls = ri.headwindConcern.severity === 'nogo' ? 'nogo' : 'warn';
+        html += `<div class="route-advisory ${cls}">${ri.headwindConcern.note}</div>`;
+      }
+      if (ri.icingConcern) {
+        const cls = ri.icingConcern.severity === 'nogo' ? 'nogo' : 'warn';
+        html += `<div class="route-advisory ${cls}">${ri.icingConcern.note}</div>`;
+      }
+      html += `</div>`;
+    }
+
     // ── Hemispheric Rule ──
     if (ri.hemispheric) {
       const h   = ri.hemispheric;
@@ -3573,26 +3648,71 @@
 
     // ── Winds Aloft ──
     if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
+      const wa        = ri.windsAloft;
+      const levelNote = wa.levelUsed === 'mid' ? ' · Mid Level' : '';
+      const cacheNote = `<span style="font-size:8px;opacity:0.5;margin-left:6px;">20min cache</span>`;
       html += `<div class="route-section">
-        <div class="route-section-label">Winds Aloft · Nearest Station: ${ri.windsAloft.station || '—'}${ri.windsAloft.forecastCycle ? ` · Cycle: ${ri.windsAloft.forecastCycle}Z` : ''}</div>
-        <div class="winds-grid">`;
-      for (const lvl of ri.windsAloft.levels) {
-        const isCruise = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500;
-        const border   = isCruise ? 'border-color: var(--gold);' : '';
+        <div class="route-section-label">Winds Aloft · Nearest Station: ${wa.station || '—'}${wa.forecastCycle ? ` · Cycle: ${wa.forecastCycle}Z${levelNote}` : ''}${cacheNote}</div>`;
+
+      // ── Interpolated cruise wind row ──
+      if (wa.cruiseWind && wa.cruiseWind.windDir !== null) {
+        const cw    = wa.cruiseWind;
+        const hwc   = wa.headwindComponent;
+        const hwStr = hwc
+          ? (hwc.component > 0
+              ? `<span style="color:#F87171;">▲ ${hwc.component}kt headwind</span>`
+              : hwc.component < 0
+                ? `<span style="color:#4ADE80;">▼ ${Math.abs(hwc.component)}kt tailwind</span>`
+                : `<span style="opacity:0.5;">⊥ No headwind/tailwind</span>`)
+          : '';
+        const interpNote = cw.interpolated ? `<span style="font-size:8px;opacity:0.5;"> (interpolated)</span>` : '';
+        html += `<div class="wind-level" style="border-color:var(--gold);grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:8px 10px;">
+          <div>
+            <div class="wind-level-alt">${(cw.altitudeFt/1000).toFixed(1)}k ft ★ CRUISE${interpNote}</div>
+            <div class="wind-level-val">${String(cw.windDir).padStart(3,'0')}° @ ${cw.windSpeed}kts${cw.tempC !== null ? ` · ${cw.tempC}°C` : ''}</div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;text-align:right;">${hwStr}</div>
+        </div>`;
+      }
+
+      html += `<div class="winds-grid">`;
+      for (const lvl of wa.levels) {
+        const border = 'opacity:0.7;';
         if (lvl.calm) {
           html += `<div class="wind-level" style="${border}">
-            <div class="wind-level-alt">${(lvl.altitudeFt / 1000).toFixed(0)}k ft${isCruise ? ' ★' : ''}</div>
+            <div class="wind-level-alt">${(lvl.altitudeFt/1000).toFixed(0)}k ft</div>
             <div class="wind-level-val">Calm / Light</div>
           </div>`;
         } else if (lvl.windDir !== null && lvl.windSpeed !== null) {
           html += `<div class="wind-level" style="${border}">
-            <div class="wind-level-alt">${(lvl.altitudeFt / 1000).toFixed(0)}k ft${isCruise ? ' ★' : ''}</div>
+            <div class="wind-level-alt">${(lvl.altitudeFt/1000).toFixed(0)}k ft</div>
             <div class="wind-level-val">${String(lvl.windDir).padStart(3,'0')}° @ ${lvl.windSpeed}kts</div>
             ${lvl.tempC !== null ? `<div class="wind-level-temp">${lvl.tempC}°C</div>` : ''}
           </div>`;
         }
       }
-      html += `</div></div>`;
+      html += `</div>`;
+
+      // ── Freezing level ──
+      if (wa.freezingLevel !== null && wa.freezingLevel !== undefined) {
+        if (wa.freezingLevelAboveRange) {
+          html += `<div class="route-advisory info" style="margin-top:6px;">ℹ Freezing level above FL180 (above reporting range) — no icing risk at or below cruise altitude</div>`;
+        } else {
+          const fzFt     = wa.freezingLevel;
+          const atCruise  = ri.cruiseAlt && Math.abs(fzFt - ri.cruiseAlt) < 2000;
+          const aboveCruise = ri.cruiseAlt && fzFt > ri.cruiseAlt;
+          const fzCls    = atCruise ? 'warn' : 'info';
+          const fzIcon   = atCruise ? '⚠' : 'ℹ';
+          const fzNote   = atCruise
+            ? ` — within 2,000ft of cruise altitude, icing possible`
+            : aboveCruise
+              ? ` — above cruise altitude, icing risk below`
+              : ` — below cruise altitude`;
+          html += `<div class="route-advisory ${fzCls}" style="margin-top:6px;">${fzIcon} Freezing level ~${fzFt.toLocaleString()}ft${fzNote}</div>`;
+        }
+      }
+
+      html += `</div>`;
     } else if (ri.cruiseAlt) {
       html += `<div class="route-section">
         <div class="route-section-label">Winds Aloft</div>
@@ -3756,23 +3876,19 @@
 
     // ── G-AIRMETs ──
     if (ri.gairmets && ri.gairmets.length > 0) {
+      const advisories    = ri.gairmets.filter(a => !a.isFzlvl);
+      const informational = ri.gairmets.filter(a =>  a.isFzlvl);
+      const countLabel    = advisories.length > 0 && informational.length > 0
+        ? `${advisories.length} active · ${informational.length} informational`
+        : advisories.length > 0
+          ? `${advisories.length} active near route`
+          : `${informational.length} informational near route`;
       html += `<div class="route-section">
-        <div class="route-section-label">G-AIRMETs (${ri.gairmets.length} active near route)</div>`;
+        <div class="route-section-label">G-AIRMETs (${countLabel})</div>`;
       for (const a of ri.gairmets) {
-        const hazardLabel = {
-          'IFR':     'IFR Conditions',
-          'MT_OBSC': 'Mountain Obscuration',
-          'TURB-LO': 'Low-Level Turbulence',
-          'TURB-HI': 'High-Level Turbulence',
-          'SFC_WND': 'Surface Winds',
-          'LLWS':    'Low-Level Wind Shear',
-          'ICE':     'Icing',
-          'FZLVL':   'Freezing Level',
-          'M_FZLVL': 'Multiple Freezing Levels',
-        }[a.hazard] || a.hazard;
+        const hazardLabel = (GAIRMET_HAZARD_LABELS[a.hazard] || a.hazard);
 
         // Format altitude — base/top are in feet MSL from parseAlt
-        const fmtAlt = ft => ft === 0 ? 'SFC' : ft >= 1000 ? `${(ft/1000).toFixed(0)}k ft` : `${ft}ft`;
         const altStr  = (a.base !== null && a.top !== null && a.top > 0)
           ? ` · ${fmtAlt(a.base)}–${fmtAlt(a.top)}` : '';
         const sevStr  = a.severity ? ` · ${a.severity}` : '';
@@ -4176,25 +4292,53 @@
     const flightDate0 = document.getElementById('flightDate')?.value         || '—';
     const frLabel0    = flightRules === 'SOLO' ? 'VFR — Student Solo' : flightRules;
 
-    // Per-leg summary
+    // Per-leg summary with wind-adjusted time
+    let totalAdjMins = 0;
+    let anyWindAdj   = false;
     window._lastLegs.forEach((leg, i) => {
-      const depStr  = leg.departure || '?';
-      const arrStr  = leg.arrival   || '?';
-      const legMins = leg.flightMin || null;
-      const legHrs  = legMins ? (legMins / 60).toFixed(1) : '—';
+      const depStr    = leg.departure || '?';
+      const arrStr    = leg.arrival   || '?';
+      const legMins   = leg.flightMin || null;
+      const legHrs    = legMins ? (legMins / 60).toFixed(1) : '—';
       const cruiseStr = leg.cruiseAltFt ? `${(leg.cruiseAltFt/1000).toFixed(1)}k ft` : '—';
-      lines.push(`  Leg ${i+1}:  ${depStr} → ${arrStr}   Est. ${legHrs} hrs   Cruise: ${cruiseStr}`);
+
+      // Wind-adjusted time using TAS proxy = distance / entered_time
+      let adjStr = '';
+      const ri  = window._lastData?.legs?.[i]?.routeIntelligence;
+      const hwc = ri?.headwindComponent;
+      if (legMins && hwc && hwc.component !== 0) {
+        const distNm = leg.distNm || null;
+        if (distNm && distNm > 0) {
+          const enteredHrs = legMins / 60;
+          const tasProxy   = distNm / enteredHrs;
+          const effSpeed   = tasProxy - hwc.component; // negative hwc = tailwind adds speed
+          if (effSpeed > 0) {
+            const adjHrs = distNm / effSpeed;
+            const adjMins = Math.round(adjHrs * 60);
+            totalAdjMins += adjMins;
+            anyWindAdj = true;
+            const delta = adjHrs - enteredHrs;
+            const sign  = delta > 0 ? '+' : '';
+            adjStr = `  Adj: ${adjHrs.toFixed(1)} hrs (${sign}${delta.toFixed(1)} wind)`;
+          }
+        }
+      } else if (legMins) {
+        totalAdjMins += legMins;
+      }
+
+      lines.push(`  Leg ${i+1}:  ${depStr} → ${arrStr}   Est. ${legHrs} hrs   Cruise: ${cruiseStr}${adjStr}`);
     });
 
     // Total estimated flight time
     const totalMins = window._lastLegs.reduce((sum, l) => sum + (l.flightMin || 0), 0);
     const totalHrs  = totalMins > 0 ? (totalMins / 60).toFixed(1) : '—';
+    const totalAdjHrs = totalAdjMins > 0 ? (totalAdjMins / 60).toFixed(1) : null;
 
     lines.push('');
     lines.push(`  Date:         ${flightDate0}`);
     lines.push(`  PIC:          ${picName0}`);
     lines.push(`  Flight Rules: ${frLabel0}`);
-    lines.push(`  Total Est:    ${totalHrs} hrs`);
+    lines.push(`  Total Est:    ${totalHrs} hrs${anyWindAdj && totalAdjHrs ? ` (${totalAdjHrs} hrs wind-adjusted)` : ''}`);
     lines.push(`  Aircraft:     — (pending aircraft profile)`);
 
     // Remarks — occupants, night legs, IFR
@@ -4449,6 +4593,15 @@
           lines.push('');
         }
 
+        // Headwind and icing concerns
+        if (ri.headwindConcern) {
+          lines.push(ri.headwindConcern.note);
+        }
+        if (ri.icingConcern) {
+          lines.push(ri.icingConcern.note);
+        }
+        if (ri.headwindConcern || ri.icingConcern) lines.push('');
+
         // Hemispheric rule
         if (ri.hemispheric) {
           lines.push(`Hemispheric Rule:  ${ri.hemispheric.note}`);
@@ -4456,15 +4609,46 @@
 
         // Winds aloft
         if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
-          const cycleLabel = ri.windsAloft.forecastCycle ? ` (${ri.windsAloft.forecastCycle}Z cycle)` : '';
-          lines.push(`Winds Aloft (${ri.windsAloft.station || '?'})${cycleLabel}:`);
-          for (const lvl of ri.windsAloft.levels) {
-            const star = ri.cruiseAlt && Math.abs(lvl.altitudeFt - ri.cruiseAlt) < 1500 ? ' ★' : '';
+          const wa         = ri.windsAloft;
+          const cycleLabel = wa.forecastCycle ? ` (${wa.forecastCycle}Z cycle, 20min cache)` : '';
+          const levelLabel = wa.levelUsed === 'mid' ? ' mid-level' : '';
+          lines.push(`Winds Aloft${levelLabel} (${wa.station || '?'})${cycleLabel}:`);
+
+          // Interpolated cruise altitude wind
+          if (wa.cruiseWind && wa.cruiseWind.windDir !== null) {
+            const cw      = wa.cruiseWind;
+            const tempStr = cw.tempC !== null ? `  ${cw.tempC}°C` : '';
+            const interp  = cw.interpolated ? ' (interpolated)' : '';
+            lines.push(`  ${(cw.altitudeFt/1000).toFixed(1)}k ft ★ CRUISE${interp}: ${String(cw.windDir).padStart(3,'0')}° @ ${cw.windSpeed}kts${tempStr}`);
+          }
+
+          // Headwind/tailwind
+          if (wa.headwindComponent) {
+            const hwc = wa.headwindComponent;
+            const hwStr = hwc.component > 0
+              ? `${hwc.component}kt HEADWIND (course ${hwc.course}°)`
+              : hwc.component < 0
+                ? `${Math.abs(hwc.component)}kt TAILWIND (course ${hwc.course}°)`
+                : `No headwind/tailwind component (course ${hwc.course}°)`;
+            lines.push(`  Wind Component:  ${hwStr}`);
+          }
+
+          // Surrounding levels
+          for (const lvl of wa.levels) {
             if (lvl.calm) {
-              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft${star}: Calm / Light`);
+              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft: Calm / Light`);
             } else if (lvl.windDir !== null) {
               const tempStr = lvl.tempC !== null ? `  ${lvl.tempC}°C` : '';
-              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft${star}: ${String(lvl.windDir).padStart(3,'0')}° @ ${lvl.windSpeed}kts${tempStr}`);
+              lines.push(`  ${(lvl.altitudeFt/1000).toFixed(0)}k ft: ${String(lvl.windDir).padStart(3,'0')}° @ ${lvl.windSpeed}kts${tempStr}`);
+            }
+          }
+
+          // Freezing level
+          if (wa.freezingLevel !== null && wa.freezingLevel !== undefined) {
+            if (wa.freezingLevelAboveRange) {
+              lines.push(`  Freezing Level:  Above FL180 (above reporting range)`);
+            } else {
+              lines.push(`  Freezing Level:  ~${wa.freezingLevel.toLocaleString()}ft MSL`);
             }
           }
         }
@@ -4543,15 +4727,14 @@
 
         // G-AIRMETs
         if (ri.gairmets && ri.gairmets.length > 0) {
-          lines.push(`G-AIRMETs (${ri.gairmets.length} active):`);
+          const adv  = ri.gairmets.filter(a => !a.isFzlvl);
+          const info = ri.gairmets.filter(a =>  a.isFzlvl);
+          const countLabel = adv.length > 0 && info.length > 0
+            ? `${adv.length} active · ${info.length} informational`
+            : adv.length > 0 ? `${adv.length} active` : `${info.length} informational`;
+          lines.push(`G-AIRMETs (${countLabel}):`);
           ri.gairmets.forEach(a => {
-            const hazardLabel = {
-              'IFR':'IFR Conditions','MT_OBSC':'Mountain Obscuration',
-              'TURB-LO':'Low-Level Turbulence','TURB-HI':'High-Level Turbulence',
-              'SFC_WND':'Surface Winds','LLWS':'Low-Level Wind Shear',
-              'ICE':'Icing','FZLVL':'Freezing Level','M_FZLVL':'Multiple Freezing Levels',
-            }[a.hazard] || a.hazard;
-            const fmtAlt   = ft => ft === 0 ? 'SFC' : ft >= 1000 ? `${(ft/1000).toFixed(0)}kft` : `${ft}ft`;
+            const hazardLabel = (GAIRMET_HAZARD_LABELS[a.hazard] || a.hazard);
             const alt      = (a.base !== null && a.top !== null && a.top > 0)
               ? ` ${fmtAlt(a.base)}–${fmtAlt(a.top)}` : '';
             const sev      = a.severity ? ` · ${a.severity}` : '';
