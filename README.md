@@ -1,6 +1,6 @@
 # Central Aviation Preflight
 
-A preflight planning and documentation platform for Part 61 flight training operations. Built for a single-CFI operation at KMRB (Eastern WV Regional), deployable to any small flight school or independent instructor.
+A preflight planning and documentation platform for Part 61 flight training operations. Built for any small flight school or independent instructor.
 
 https://aconway01.github.io/preflight/preflight.html
 
@@ -205,4 +205,4 @@ AVWX free tier supports approximately 1,000 requests/day. Each brief uses ~4 AVW
 
 ---
 
-*Central Aviation — KMRB, Martinsburg WV*
+*Central Aviation*
