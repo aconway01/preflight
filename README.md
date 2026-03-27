@@ -2,6 +2,8 @@
 
 A preflight planning and documentation platform for Part 61 flight training operations. Built for a single-CFI operation at KMRB (Eastern WV Regional), deployable to any small flight school or independent instructor.
 
+https://aconway01.github.io/preflight/preflight.html
+
 ---
 
 ## Overview
