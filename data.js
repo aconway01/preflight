@@ -143,7 +143,7 @@ const CA_DATA = {
   INSTRUCTORS: [
     {
       id:   'andy-conway',
-      name: 'Andy Conway',
+      name: '',
       cert: '',
 
       minimums: {

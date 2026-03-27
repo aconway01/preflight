@@ -531,15 +531,6 @@
       font-size: 11px; opacity: 0.4;
     }
 
-    /* Secondary mode tier — shown in web app alongside active mode */
-    .mins-tier-secondary {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(200,164,77,0.1);
-    }
-    .mins-tier-secondary .mins-tier-name { color: var(--slate); }
-    .mins-tier-secondary .mins-tier-desc { opacity: 0.5; }
-
     /* Print all-modes block */
     .mins-print-mode-block {
       margin-bottom: 14px; padding-bottom: 14px;
@@ -1734,7 +1725,7 @@
 
   <header>
     <div class="logo-block">
-      <img src="LogoTransparent.png" alt="Central Aviation" class="logo-img">
+      <img src="Logo.png" alt="Central Aviation" class="logo-img">
       <div class="logo-text">
         <div class="tool">Preflight</div>
       </div>
@@ -2093,11 +2084,23 @@
         </div>
       </div>
 
-      <!-- Instructor Minimums — read-only, sourced from data.js -->
+      <!-- Instructor Minimums — editable inline, enforced above FAA floor -->
       <div class="mins-tier" id="minsTierInstr">
-        <div class="mins-tier-label">
-          <span class="mins-tier-name">Instructor Minimums</span>
-          <span class="mins-tier-desc" id="minsTierInstrDesc">Central Aviation · Andy Conway</span>
+        <div class="mins-tier-label" style="flex-direction:column;align-items:flex-start;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+            <span class="mins-tier-name">Instructor Minimums</span>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.5px;color:var(--slate);cursor:pointer;">
+              <input type="checkbox" id="instrDisabledToggle" style="width:12px;height:12px;accent-color:var(--gold);">
+              Disable (use FAA floor only)
+            </label>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.5px;color:var(--slate);white-space:nowrap;">Instructor</span>
+            <input type="text" id="instrNameField" placeholder="Instructor name"
+              style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);
+                     color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
+                     padding:2px 0;outline:none;">
+          </div>
         </div>
         <div class="mins-grid" id="minsGridInstr"></div>
       </div>
@@ -2112,7 +2115,7 @@
         <div class="mins-actions">
           <span class="mins-status" id="minsStatus"></span>
           <button class="mins-reset" id="minsResetBtn">Reset to instructor minimums</button>
-          <button class="mins-save"  id="minsSaveBtn">Save minimums</button>
+          <button class="mins-save"  id="minsSaveBtn">Set minimums</button>
         </div>
       </div>
 
@@ -2219,9 +2222,9 @@
     <div class="disclaimer">
       This report is generated automatically and does not replace an official pilot weather briefing.
       Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.
-      Central Aviation · Internal Use Only
+      Central Aviation
     </div>
-    <img src="LogoTransparent.png" alt="Central Aviation" class="footer-logo">
+    <img src="Logo.png" alt="Central Aviation" class="footer-logo">
   </footer>
 
 </div>
@@ -2257,64 +2260,68 @@
   // at each field for the given mode, aircraft, and student.
   // direction: 'min' = higher is safer (vis/ceil), 'max' = lower is safer (wind/DA)
   function resolveInstructorFloor(mode, aircraftId, studentCert) {
-    const instructor = INSTRUCTORS[0]; // single instructor for now
-    const resolved   = {};
+    const resolved = {};
 
     MINIMUMS_FIELDS.forEach(f => {
       if (!f.modes.includes(mode)) return;
       const candidates = [];
 
-      // FAA floor
+      // FAA floor — always the absolute minimum
       const faaVal = FAA_MINIMUMS[mode]?.[f.key];
       if (faaVal !== null && faaVal !== undefined) candidates.push(faaVal);
 
-      // School general
-      const schoolVal = SCHOOL.minimums?.[mode]?.[f.key];
-      if (schoolVal !== null && schoolVal !== undefined) candidates.push(schoolVal);
+      // If instructor minimums are disabled, FAA floor is the only constraint
+      if (!_instrDisabled) {
+        // School general
+        const schoolVal = SCHOOL.minimums?.[mode]?.[f.key];
+        if (schoolVal !== null && schoolVal !== undefined) candidates.push(schoolVal);
 
-      // School aircraft
-      if (aircraftId) {
-        const sAcVal = SCHOOL.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
-        if (sAcVal !== null && sAcVal !== undefined) candidates.push(sAcVal);
-      }
+        // School aircraft
+        if (aircraftId) {
+          const sAcVal = SCHOOL.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
+          if (sAcVal !== null && sAcVal !== undefined) candidates.push(sAcVal);
+        }
 
-      // School student
-      if (studentCert) {
-        const sStuVal = SCHOOL.student_minimums?.[studentCert]?.[mode]?.[f.key];
-        if (sStuVal !== null && sStuVal !== undefined) candidates.push(sStuVal);
-      }
+        // School student
+        if (studentCert) {
+          const sStuVal = SCHOOL.student_minimums?.[studentCert]?.[mode]?.[f.key];
+          if (sStuVal !== null && sStuVal !== undefined) candidates.push(sStuVal);
+        }
 
-      // School student aircraft
-      if (studentCert && aircraftId) {
-        const sStuAcVal = SCHOOL.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
-        if (sStuAcVal !== null && sStuAcVal !== undefined) candidates.push(sStuAcVal);
-      }
+        // School student aircraft
+        if (studentCert && aircraftId) {
+          const sStuAcVal = SCHOOL.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
+          if (sStuAcVal !== null && sStuAcVal !== undefined) candidates.push(sStuAcVal);
+        }
 
-      // Instructor general
-      const instrVal = instructor?.minimums?.[mode]?.[f.key];
-      if (instrVal !== null && instrVal !== undefined) candidates.push(instrVal);
+        // Editable instructor minimums — use _instrMins if set, else fall back to data.js
+        const instrEdited = _instrMins[mode]?.[f.key];
+        const instrData   = INSTRUCTORS[0]?.minimums?.[mode]?.[f.key];
+        const instrVal    = instrEdited !== undefined ? instrEdited : instrData;
+        if (instrVal !== null && instrVal !== undefined) candidates.push(instrVal);
 
-      // Instructor aircraft
-      if (aircraftId) {
-        const iAcVal = instructor?.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
-        if (iAcVal !== null && iAcVal !== undefined) candidates.push(iAcVal);
-      }
+        // Instructor aircraft
+        if (aircraftId) {
+          const iAcVal = INSTRUCTORS[0]?.aircraft_minimums?.[aircraftId]?.[mode]?.[f.key];
+          if (iAcVal !== null && iAcVal !== undefined) candidates.push(iAcVal);
+        }
 
-      // Instructor student
-      if (studentCert) {
-        const iStuVal = instructor?.student_minimums?.[studentCert]?.[mode]?.[f.key];
-        if (iStuVal !== null && iStuVal !== undefined) candidates.push(iStuVal);
-      }
+        // Instructor student
+        if (studentCert) {
+          const iStuVal = INSTRUCTORS[0]?.student_minimums?.[studentCert]?.[mode]?.[f.key];
+          if (iStuVal !== null && iStuVal !== undefined) candidates.push(iStuVal);
+        }
 
-      // Instructor student aircraft
-      if (studentCert && aircraftId) {
-        const iStuAcVal = instructor?.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
-        if (iStuAcVal !== null && iStuAcVal !== undefined) candidates.push(iStuAcVal);
+        // Instructor student aircraft
+        if (studentCert && aircraftId) {
+          const iStuAcVal = INSTRUCTORS[0]?.student_aircraft_minimums?.[studentCert]?.[aircraftId]?.[mode]?.[f.key];
+          if (iStuAcVal !== null && iStuAcVal !== undefined) candidates.push(iStuAcVal);
+        }
       }
 
       if (candidates.length === 0) { resolved[f.key] = null; return; }
 
-      // Most restrictive: for 'min' fields take the highest value; for 'max' take the lowest
+      // Most restrictive: 'min' fields → highest value; 'max' fields → lowest value
       resolved[f.key] = f.direction === 'min'
         ? Math.max(...candidates)
         : Math.min(...candidates);
@@ -2552,7 +2559,14 @@
   document.getElementById('addOccupantBtn').addEventListener('click', addOccupantSlot);
 
   // ── MINIMUMS PANEL RENDERING ──
-  let _currentMinimumsMode = 'vfr_day';
+  let _currentMinimumsMode    = 'vfr_day';
+
+  // Instructor minimums state — editable inline, persisted in memory
+  let _instrDisabled = false;
+  let _instrName     = '';
+  // _instrMins: in-memory editable instructor minimums, keyed by mode
+  // Initialized from data.js INSTRUCTORS[0] on first use
+  const _instrMins = {};
 
   // ── PERSONAL MINIMUMS PERSISTENCE ──
   // _personalMins: in-memory working copy, written on every input change
@@ -2586,6 +2600,31 @@
   // Wire reset and save buttons
   document.getElementById('minsResetBtn').addEventListener('click', resetMinimums);
   document.getElementById('minsSaveBtn').addEventListener('click', saveMinimums);
+
+  // Wire instructor name field
+  const instrNameField = document.getElementById('instrNameField');
+  if (instrNameField) {
+    instrNameField.value = _instrName;
+    instrNameField.addEventListener('input', () => {
+      _instrName = instrNameField.value;
+    });
+  }
+
+  // Wire instructor disabled toggle
+  const instrDisabledToggle = document.getElementById('instrDisabledToggle');
+  if (instrDisabledToggle) {
+    instrDisabledToggle.addEventListener('change', () => {
+      _instrDisabled = instrDisabledToggle.checked;
+      // Grey out name field when disabled
+      const nameField = document.getElementById('instrNameField');
+      if (nameField) {
+        nameField.disabled = _instrDisabled;
+        nameField.style.opacity = _instrDisabled ? '0.35' : '1';
+      }
+      // Re-render to update floor enforcement and instructor input state
+      renderMinimumsPanel(_currentMinimumsMode);
+    });
+  }
 
   // Wire regulatory reference toggle
   const regToggle = document.getElementById('minsRegToggle');
@@ -2662,20 +2701,60 @@
     const paltReg = document.getElementById('minsRegPalt');
     if (paltReg) paltReg.style.display = fields.some(f => f.key === 'maxPressureAlt') ? '' : 'none';
 
-    // ── Instructor tier ──
+    // ── Instructor tier — editable, enforced above FAA floor ──
     const instrGrid = document.getElementById('minsGridInstr');
     if (instrGrid) {
+      const faaFloorOnly = FAA_MINIMUMS[mode] || {};
       instrGrid.className = 'mins-readonly-grid';
       instrGrid.innerHTML = fields.map(f => {
-        const val = instrFloor[f.key];
-        const display = (val === null || val === undefined)
-          ? `<span class="mins-readonly-cell-value n-a">—</span>`
-          : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
-        return `<div class="mins-readonly-cell">
-          <div class="mins-readonly-cell-label">${f.label}</div>
-          ${display}
+        const faaVal  = faaFloorOnly[f.key];
+        // Use _instrMins if edited, else data.js values
+        const dataVal = INSTRUCTORS[0]?.minimums?.[mode]?.[f.key];
+        const editVal = _instrMins[mode]?.[f.key];
+        const val     = editVal !== undefined ? editVal : (dataVal ?? faaVal ?? '');
+        const step    = f.unit === 'SM' ? '0.5' : f.unit === 'ft' ? '100' : '1';
+        const disabled = _instrDisabled ? 'disabled' : '';
+        const disabledStyle = _instrDisabled ? 'opacity:0.4;pointer-events:none;' : '';
+        return `<div class="mins-input-cell" data-field="${f.key}" style="${disabledStyle}">
+          <div class="mins-input-cell-label">${f.label} (${f.unit})</div>
+          <input type="number" id="instr_${f.key}" value="${_instrDisabled ? (faaVal ?? '') : val}"
+            min="0" step="${step}"
+            data-faa-floor="${faaVal ?? ''}"
+            data-direction="${f.direction}"
+            ${disabled}>
         </div>`;
       }).join('');
+
+      // Wire FAA floor enforcement for instructor inputs (once)
+      if (!instrGrid._floorListenerAdded) {
+        instrGrid.addEventListener('input', e => {
+          if (!e.target.matches('input[type="number"]')) return;
+          const faaFloor  = e.target.dataset.faaFloor !== '' ? parseFloat(e.target.dataset.faaFloor) : null;
+          const direction = e.target.dataset.direction;
+          const val       = parseFloat(e.target.value);
+          if (faaFloor !== null && !isNaN(val)) {
+            const blocked = direction === 'min' ? val < faaFloor : val > faaFloor;
+            if (blocked) e.target.value = faaFloor;
+          }
+          // Persist to _instrMins
+          const fieldKey = e.target.id.replace('instr_', '');
+          if (!_instrMins[_currentMinimumsMode]) _instrMins[_currentMinimumsMode] = {};
+          _instrMins[_currentMinimumsMode][fieldKey] = parseFloat(e.target.value);
+          // Re-enforce personal minimums floors
+          renderPersonalInputFloors(_currentMinimumsMode);
+          updateMinsStatus();
+        });
+        instrGrid._floorListenerAdded = true;
+      }
+    }
+
+    // Sync disabled toggle and name field state
+    const disabledToggle = document.getElementById('instrDisabledToggle');
+    if (disabledToggle) disabledToggle.checked = _instrDisabled;
+    const nameField = document.getElementById('instrNameField');
+    if (nameField) {
+      nameField.disabled = _instrDisabled;
+      nameField.style.opacity = _instrDisabled ? '0.35' : '1';
     }
 
     // ── Personal minimums inputs ──
@@ -2725,61 +2804,8 @@
     }
     updateMinsStatus();
 
-    // ── Secondary mode tier (web app) ──
-    // Show companion night/day tier alongside active one — read-only reference.
-    const flightRulesVal = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
-    const companionMode  = mode === 'vfr_day'    ? 'vfr_night'
-                         : mode === 'vfr_night'  ? 'vfr_day'
-                         : mode === 'solo_day'   ? 'solo_night'
-                         : mode === 'solo_night' ? 'solo_day'
-                         : null;
-
-    document.querySelectorAll('.mins-tier-secondary').forEach(el => el.remove());
-
-    if (companionMode) {
-      const compFloor  = resolveInstructorFloor(companionMode, null, null);
-      const compSaved  = getMinimumsByMode(companionMode);
-      const compFields = MINIMUMS_FIELDS.filter(f => f.modes.includes(companionMode));
-      const compLabel  = companionMode.replace('_', ' ').toUpperCase();
-      const isNightComp = companionMode.includes('night');
-      const faaComp    = FAA_MINIMUMS[companionMode] || {};
-
-      const buildGrid = vals => compFields.map(f => {
-        const val = vals[f.key];
-        const display = (val === null || val === undefined)
-          ? `<span class="mins-readonly-cell-value n-a">—</span>`
-          : `<span class="mins-readonly-cell-value">${val} ${f.unit}</span>`;
-        const tipAttr = f.tip ? ` data-tip="${f.tip.replace(/"/g, '&quot;')}"` : '';
-        return `<div class="mins-readonly-cell">
-          <div class="mins-readonly-cell-label mins-cell-label"${tipAttr}>${f.label}</div>
-          ${display}
-        </div>`;
-      }).join('');
-
-      const secTier = document.createElement('div');
-      secTier.className = 'mins-tier-secondary';
-      secTier.innerHTML = `
-        <div class="mins-tier-label" style="margin-bottom:12px;">
-          <span class="mins-tier-name">${compLabel}</span>
-          <span class="mins-tier-desc">${isNightComp ? 'Night' : 'Day'} minimums — read-only reference</span>
-        </div>
-        <div style="margin-bottom:8px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">FAA</div>
-          <div class="mins-readonly-grid">${buildGrid(faaComp)}</div>
-        </div>
-        <div style="margin-bottom:8px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">Instructor</div>
-          <div class="mins-readonly-grid">${buildGrid(compFloor)}</div>
-        </div>
-        <div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);opacity:0.6;margin-bottom:4px;">Personal (Saved)</div>
-          <div class="mins-readonly-grid">${buildGrid(compSaved)}</div>
-        </div>`;
-      const personalTier = document.getElementById('minsTierPersonal');
-      if (personalTier) personalTier.after(secTier);
-    }
-
     // ── Print all-modes snapshot ──
+    const flightRulesVal = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
     const printContainer = document.getElementById('minsPrintAllModes');
     if (printContainer) {
       const isIFRPrint  = flightRulesVal === 'IFR';
@@ -2835,6 +2861,23 @@
     }
   }
 
+  // Re-apply instructor floor to personal inputs without full re-render.
+  // Called when instructor minimums are edited inline.
+  function renderPersonalInputFloors(mode) {
+    const instrFloor = resolveInstructorFloor(mode, null, null);
+    const fields     = MINIMUMS_FIELDS.filter(f => f.modes.includes(mode));
+    fields.forEach(f => {
+      const input = document.getElementById(f.key);
+      if (!input) return;
+      const floorVal = instrFloor[f.key];
+      input.dataset.floor = floorVal ?? '';
+      enforceMinFloor(input);
+      const cell = input.closest('.mins-input-cell');
+      if (cell) cell.classList.toggle('at-floor',
+        parseFloat(input.value) === parseFloat(input.dataset.floor));
+    });
+  }
+
   // Override getMinimumsMode to use the panel's active mode button
   function getMinimumsMode() {
     return _currentMinimumsMode;
@@ -2863,8 +2906,23 @@
   }
 
   function saveMinimums() {
-    // Snapshot current DOM values for ALL modes by reading inputs when visible,
-    // and _personalMins for modes not currently displayed
+    // Snapshot instructor inputs for the active mode
+    const iMode   = _currentMinimumsMode;
+    const iFields = MINIMUMS_FIELDS.filter(f => f.modes.includes(iMode));
+    if (!_instrMins[iMode]) _instrMins[iMode] = {};
+    iFields.forEach(f => {
+      const el = document.getElementById(`instr_${f.key}`);
+      if (el) {
+        const faaFloor  = el.dataset.faaFloor !== '' ? parseFloat(el.dataset.faaFloor) : null;
+        let val = parseFloat(el.value);
+        if (faaFloor !== null && !isNaN(val)) {
+          val = f.direction === 'min' ? Math.max(val, faaFloor) : Math.min(val, faaFloor);
+        }
+        _instrMins[iMode][f.key] = isNaN(val) ? null : val;
+      }
+    });
+
+    // Snapshot personal minimums for all modes
     const modes = ['vfr_day', 'vfr_night', 'ifr', 'solo_day', 'solo_night'];
     modes.forEach(mode => {
       const floor = resolveInstructorFloor(mode, null, null);
@@ -2873,7 +2931,6 @@
       const snapshot = {};
       MINIMUMS_FIELDS.forEach(f => {
         if (!f.modes.includes(mode)) return;
-        // If this is the active mode, read from DOM; otherwise use stored or default
         let val;
         if (mode === _currentMinimumsMode) {
           const el = document.getElementById(f.key);
@@ -2882,7 +2939,6 @@
         } else {
           val = stored[f.key] ?? defs[f.key] ?? floor[f.key];
         }
-        // Enforce floor
         const floorVal = floor[f.key];
         if (floorVal !== null && val !== null && !isNaN(val)) {
           val = f.direction === 'min' ? Math.max(val, floorVal) : Math.min(val, floorVal);
@@ -4392,6 +4448,8 @@
 
     lines.push('PERSONAL MINIMUMS');
     lines.push('-'.repeat(50));
+    if (_instrName && !_instrDisabled) lines.push(`  Instructor:  ${_instrName}`);
+    if (_instrDisabled) lines.push(`  Instructor minimums: DISABLED — FAA floor only`);
     minModes.forEach(mode => {
       const m    = getMinimumsByMode(mode);
       const label = mode.replace('_', ' ').toUpperCase();
@@ -4871,7 +4929,6 @@
     lines.push('═'.repeat(50));
     lines.push('This report does not replace an official weather briefing.');
     lines.push('Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.');
-    lines.push('Central Aviation · Internal Use Only');
     lines.push('');
     lines.push('═'.repeat(50));
     lines.push('KNOWN LIMITATIONS — WHAT THIS TOOL DOES NOT CHECK');
