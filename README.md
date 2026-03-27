@@ -17,7 +17,8 @@ The output is a printable PDF and downloadable text report suitable for CFI sign
 ### Weather Package
 - METARs and TAFs via AVWX (token-authenticated, server-side to protect credentials)
 - G-AIRMETs, SIGMETs, Convective SIGMETs, PIREPs via Aviation Weather Center
-- Winds aloft with dynamic NWS FD forecast cycle selection (24Z/06Z/12Z/18Z)
+- Winds aloft with dynamic NWS FD forecast cycle selection (24Z/06Z/12Z/18Z), wind interpolation at cruise altitude, headwind/tailwind component calculation, and freezing level derivation from temperature profile
+- Mid-level winds aloft (up to FL390) for IFR flights above 18,000ft
 - Sunrise/sunset calculated per station using NOAA solar algorithm
 - Density altitude with humidity correction
 - IFR alternate requirement check (FAR 91.169)
@@ -133,8 +134,8 @@ Personal minimums are set in the app UI and stored in the browser session. They 
 | Approach minimums | IFR procedures not included — verify from current plates |
 | Alternate weather | Alternate requirement flagged; alternate weather not fetched |
 | W&B / Performance | Phase 3 — not yet implemented |
-| Icing / freezing level | PIREPs surfaced; dedicated analysis not yet implemented |
-| Winds aloft | 3,000–18,000ft only (`level=low`) |
+| Icing / freezing level | Freezing level derived from winds aloft temperature profile. Icing concern flagged when FZL within 2,000ft of cruise and icing PIREPs present. Dedicated icing model not implemented. |
+| Winds aloft | 3,000–18,000ft (`level=low`); mid-level up to FL390 for IFR cruise >18,000ft |
 | International routes | CONUS only for winds aloft and G-AIRMETs; METARs/TAFs still valid |
 
 This tool does not replace an official weather briefing. Always obtain a standard weather briefing from 1800wxbrief.com, ForeFlight, or another FAA-approved source before every flight.
