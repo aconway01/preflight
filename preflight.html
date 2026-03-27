@@ -1143,7 +1143,8 @@
     .sun-item span { color: var(--slate); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 2px; }
     .night-flag {
       font-family: 'IBM Plex Mono', monospace; font-size: 10px;
-      padding: 4px 10px; border-radius: 3px; display: inline-block;
+      padding: 4px 10px; border-radius: 3px; display: block;
+      width: fit-content;
     }
     .night-flag.night    { background: rgba(99,102,241,0.2);  color: #A5B4FC; border: 1px solid rgba(99,102,241,0.3); }
     .night-flag.day      { background: rgba(22,163,74,0.1);   color: #4ADE80; border: 1px solid rgba(22,163,74,0.2); }
@@ -3758,11 +3759,29 @@
       html += `<div class="route-section">
         <div class="route-section-label">G-AIRMETs (${ri.gairmets.length} active near route)</div>`;
       for (const a of ri.gairmets) {
-        const altStr  = (a.base !== null && a.top !== null) ? ` · ${a.base}–${a.top}ft` : '';
+        const hazardLabel = {
+          'IFR':     'IFR Conditions',
+          'MT_OBSC': 'Mountain Obscuration',
+          'TURB-LO': 'Low-Level Turbulence',
+          'TURB-HI': 'High-Level Turbulence',
+          'SFC_WND': 'Surface Winds',
+          'LLWS':    'Low-Level Wind Shear',
+          'ICE':     'Icing',
+          'FZLVL':   'Freezing Level',
+          'M_FZLVL': 'Multiple Freezing Levels',
+        }[a.hazard] || a.hazard;
+
+        const altStr  = (a.base !== null && a.top !== null && a.top > 0)
+          ? ` · ${a.base === 0 ? 'SFC' : (a.base/100).toFixed(0)+'k'}–${(a.top/100).toFixed(0)}k ft` : '';
+        const sevStr  = a.severity ? ` · ${a.severity}` : '';
+        const dueStr  = a.dueTo ? `<div class="advisory-note">${a.dueTo}</div>` : '';
         const icingAt = a.atCruiseAlt
           ? ` <span style="font-weight:600;color:var(--red);">⚠ AT CRUISE ALT</span>` : '';
         const cls     = a.atCruiseAlt ? 'nogo' : 'warn';
-        html += `<div class="route-advisory ${cls}">⚠ ${a.hazard}${altStr}${icingAt}${a.validTo ? ' — valid to ' + formatUtcForDisplay(a.validTo) : ''}</div>`;
+        const validStr = a.validTo ? ` · Valid to ${formatUtcForDisplay(a.validTo)}` : '';
+        html += `<div class="route-advisory ${cls}">⚠ ${hazardLabel}${sevStr}${altStr}${icingAt}${validStr}
+          ${dueStr}
+        </div>`;
       }
       html += `</div>`;
     } else {
@@ -4517,9 +4536,19 @@
         if (ri.gairmets && ri.gairmets.length > 0) {
           lines.push(`G-AIRMETs (${ri.gairmets.length} active):`);
           ri.gairmets.forEach(a => {
-            const alt      = (a.base !== null && a.top !== null) ? ` ${a.base}–${a.top}ft` : '';
+            const hazardLabel = {
+              'IFR':'IFR Conditions','MT_OBSC':'Mountain Obscuration',
+              'TURB-LO':'Low-Level Turbulence','TURB-HI':'High-Level Turbulence',
+              'SFC_WND':'Surface Winds','LLWS':'Low-Level Wind Shear',
+              'ICE':'Icing','FZLVL':'Freezing Level','M_FZLVL':'Multiple Freezing Levels',
+            }[a.hazard] || a.hazard;
+            const alt      = (a.base !== null && a.top !== null && a.top > 0)
+              ? ` ${a.base === 0 ? 'SFC' : (a.base/100).toFixed(0)+'kft'}–${(a.top/100).toFixed(0)}kft` : '';
+            const sev      = a.severity ? ` · ${a.severity}` : '';
             const atCruise = a.atCruiseAlt ? ' ⚠ AT CRUISE ALT' : '';
-            lines.push(`  ⚠ ${a.hazard}${alt}${atCruise}${a.validTo ? ' valid to ' + formatUtcForDisplay(a.validTo) : ''}`);
+            const validStr = a.validTo ? ` valid to ${formatUtcForDisplay(a.validTo)}` : '';
+            lines.push(`  ⚠ ${hazardLabel}${sev}${alt}${atCruise}${validStr}`);
+            if (a.dueTo) lines.push(`     ${a.dueTo}`);
           });
         } else {
           lines.push('G-AIRMETs: None active near route');
