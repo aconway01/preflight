@@ -1,5 +1,5 @@
 // ============================================================
-// Central Aviation — Preflight
+// Preflight — Frontend reference data
 // data.js — Frontend reference data
 //
 // MINIMUMS HIERARCHY (most restrictive wins at each level):
@@ -78,8 +78,8 @@ const CA_DATA = {
 
   // ── School Configuration ──
   SCHOOL: {
-    id:   'central-aviation',
-    name: 'Central Aviation',
+    
+    
 
     minimums: {
       vfr_day: {
@@ -142,7 +142,7 @@ const CA_DATA = {
   // ── Instructors ──
   INSTRUCTORS: [
     {
-      id:   'andy-conway',
+      
       name: '',
       cert: '',
 
@@ -292,7 +292,7 @@ const CA_DATA = {
       category: 'Not Yet Implemented',
       severity: 'critical',
       items: [
-        { title: 'NOTAMs and TFRs',            detail: 'Runway closures, navaid outages, approach procedure changes, and active Temporary Flight Restrictions are not shown. FAA NOTAM API integration is pending. Always check NOTAMs via 1800wxbrief.com, ForeFlight, or the FAA NOTAM search before every flight.' },
+        { title: 'NOTAMs and TFRs',            detail: 'Runway closures, navaid outage, approach procedure changes, and active Temporary Flight Restrictions are not shown. FAA NOTAM API integration is pending. Always check NOTAMs via 1800wxbrief.com, ForeFlight, or the FAA NOTAM search before every flight.' },
         { title: 'Approach Minimums',          detail: 'The tool flags IFR flight category but does not know specific approach minimums for a given procedure. A runway with only a VOR approach has different minimums than one with an ILS. Verify approach minimums from current approach plates.' },
         { title: 'Alternate Airport Weather',  detail: 'The tool flags whether a FAR 91.169 alternate is required, but does not check weather at a proposed alternate. Identify and verify a qualifying alternate separately.' },
         { title: 'Weight & Balance / Performance', detail: 'No W&B calculation, takeoff/landing distance check, fuel planning, or engine-out analysis. These are pending in the next build phase. Use your aircraft POH and an approved W&B worksheet before every flight.' },
@@ -303,15 +303,15 @@ const CA_DATA = {
       severity: 'warn',
       items: [
         { title: 'Continental US Only',  detail: 'Winds aloft, G-AIRMETs, and hemispheric rule checks only cover CONUS. Routes to Canada, Alaska, Hawaii, or the Caribbean receive valid METARs/TAFs but degraded or incorrect route intelligence. A warning is shown when a route exits CONUS, but no supplemental international data is provided.' },
-        { title: 'Magnetic Variation',   detail: 'The hemispheric rule check uses geodetic (true) bearing. FAR 91.159 specifies magnetic course. At KMRB variation is approximately 10°W. Routes with a true course near 080°–090° or 170°–180° should be verified on the sectional chart.' },
+        { title: 'Magnetic Variation',   detail: 'The hemispheric rule check uses geodetic (true) bearing. FAR 91.159 specifies magnetic course. Magnetic variation ranges from approximately 5°W to 20°W across the contiguous US. Routes with a true course near 080°–090° or 170°–180° should be verified on the sectional chart.' },
       ],
     },
     {
       category: 'Altitude Limitations',
       severity: 'warn',
       items: [
-        { title: 'Winds Aloft Above 18,000ft',  detail: 'For IFR flights with cruise altitude above 18,000ft, the tool requests level=mid data (up to FL390) if the nearest FD station supports it. For VFR flights the cruise altitude input is capped at 17,500ft and level=low is always used.' },
-        { title: 'Density Altitude Thresholds', detail: 'Caution and no-go density altitude thresholds are set in instructor minimums and are not yet aircraft-specific. Aircraft-specific DA limits will be added with the aircraft profile feature.' },
+        { title: 'Winds Aloft Above 18,000ft',  detail: 'For IFR flights with cruise altitude above 18,000ft, the tool requests level=mid data (up to FL390) if the nearest FD station supports it. For VFR flights the cruise altitude input is capped at 17,500ft and level=low is always used. Mid-level data availability varies by station.' },
+        { title: 'Density Altitude Thresholds', detail: 'Caution and below-minimums density altitude thresholds are set in instructor minimums and are not yet aircraft-specific. Aircraft-specific DA limits will be added with the aircraft profile feature in a future phase.' },
       ],
     },
     {
@@ -326,18 +326,21 @@ const CA_DATA = {
       category: 'Forecast Currency',
       severity: 'info',
       items: [
-        { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (24Z, 06Z, 12Z, or 18Z) based on the current UTC time. The active cycle is shown next to the winds aloft station label. Winds aloft data covers 3,000–18,000ft only (level=low).' },
-        { title: 'Advisory Cache TTLs',         detail: 'G-AIRMETs are cached 15 minutes, SIGMETs 10 minutes, PIREPs 5 minutes. An advisory issued immediately after a cache refresh will not appear until the TTL expires. In rapidly developing convective situations, re-request the briefing.' },
-        { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will automatically use night minimums for the arrival analysis. All minimums for all relevant modes (day and night) are recorded in the text report regardless of which tab was active at brief generation.' },
-        { title: 'Wind-Adjusted Flight Time Estimate', detail: 'The wind-adjusted time in the logbook summary uses a TAS proxy derived from your entered flight time and route distance (TAS = distance ÷ entered hours). If your entered time already incorporates a wind correction, the adjustment may double-count the wind effect and produce an inaccurate estimate. The figure is clearly labelled as an estimate and should not replace proper flight planning. Aircraft-specific TAS will be used once Phase 3 aircraft profiles are available.' },
+        { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (24Z, 06Z, 12Z, or 18Z) based on the current UTC time and caches results for 20 minutes. The active cycle is shown next to the winds aloft station label. During a cycle transition the displayed data may be up to 20 minutes old.' },
+        { title: 'Advisory Cache TTLs',         detail: 'G-AIRMETs are cached 15 minutes, SIGMETs 10 minutes, PIREPs 5 minutes. An advisory issued immediately after a cache refresh will not appear until the TTL expires. In rapidly developing convective situations, re-request the briefing to force a cache refresh.' },
+        { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will automatically use night minimums for the arrival analysis. All minimums for all relevant modes are recorded in the text report regardless of which tab is active.' },
+        { title: 'Wind-Adjusted Flight Time Estimate', detail: 'The wind-adjusted time in the logbook summary uses a TAS proxy derived from your entered flight time and route distance (TAS = distance ÷ entered hours). If your entered time already incorporates a wind correction, the adjustment may double-count the wind effect. The figure is labelled as an estimate and should not replace proper flight planning.' },
+        { title: 'Runway Data Currency', detail: 'Runway headings are sourced live from the AVWX station database and reflect current FAA designations. However AVWX may not reflect the absolute latest FAA changes immediately after a redesignation. Always verify runway identifiers from current charts before flight.' },
       ],
     },
     {
       category: 'General',
       severity: 'info',
       items: [
-        { title: 'This Tool Does Not Replace an Official Briefing', detail: 'This tool is a structured planning aid. It does not constitute an official FAA weather briefing. Always obtain a full standard briefing from 1800wxbrief.com, ForeFlight, or a certificated FSS before flight.' },
-        { title: 'Airports Without METAR Stations',                detail: 'If a departure or arrival airport has no METAR station, the briefing will fail with an API error. Uncontrolled airstrips and backcountry airports often lack weather reporting.' },
+        { title: 'This Tool Does Not Replace an Official Briefing', detail: 'This tool is a structured planning aid only. It does not constitute an official FAA weather briefing and makes no go/no-go determination. The Pilot in Command bears sole responsibility for the safety of the flight under FAR 91.3. Always obtain a full standard briefing from 1800wxbrief.com, ForeFlight, or a certificated FSS before flight.' },
+        { title: 'Minimums Are Session-Only',  detail: 'Instructor and personal minimums are held in memory for the current session only. They are not saved to a database. On a fresh page load the tool uses the defaults configured in data.js. Verify your minimums are correctly set before each briefing session.' },
+        { title: 'Weather Data Service Availability', detail: 'The tool depends on the AVWX API for METARs and TAFs, and the Aviation Weather Center API for winds aloft, G-AIRMETs, SIGMETs, and PIREPs. If either service is unavailable or the AVWX daily call limit is reached, the briefing will fail. Use 1800wxbrief.com or ForeFlight as a backup.' },
+        { title: 'Airports Without METAR Stations', detail: 'If a departure or arrival airport has no METAR station, the briefing will fail with an API error. Uncontrolled airstrips and backcountry airports often lack weather reporting. Identify the nearest reporting station and assess conditions manually.' },
       ],
     },
   ],

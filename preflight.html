@@ -9,6 +9,12 @@
   <link rel="apple-touch-icon" href="ca_favicon_package/apple-touch-icon.png">
   <meta name="theme-color" content="#1C2E4A">
 
+  <!-- PWA / Add to Home Screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CA Preflight">
+  <link rel="manifest" href="manifest.json">
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Central Aviation — Preflight</title>
   <meta name="robots" content="noindex, nofollow" />
@@ -32,6 +38,8 @@
       --green-bg:   #052E16;
       --amber:      #D97706;
       --amber-bg:   #1C1009;
+      --orange:     #EA580C;
+      --orange-bg:  #1C0A04;
       --red:        #DC2626;
       --red-bg:     #1C0404;
       --panel:      #0D1E38;
@@ -39,6 +47,10 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(4px); }
+    }
 
     body {
       background: var(--navy);
@@ -938,6 +950,25 @@
       font-size: 10px; color: var(--slate); opacity: 0.5;
     }
 
+    .tou-acknowledge {
+      display: flex; align-items: flex-start; gap: 10px;
+      margin-bottom: 12px; cursor: pointer;
+      padding: 12px 14px;
+      background: rgba(200,164,77,0.06);
+      border: 1px solid rgba(200,164,77,0.2);
+      border-radius: 4px;
+    }
+    .tou-acknowledge input[type="checkbox"] {
+      margin-top: 2px; flex-shrink: 0;
+      width: 14px; height: 14px;
+      accent-color: var(--gold); cursor: pointer;
+    }
+    .tou-acknowledge-text {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; line-height: 1.6;
+      color: var(--slate); letter-spacing: 0.2px;
+    }
+
     .btn-brief {
       width: 100%;
       background: var(--navy-light);
@@ -969,9 +1000,9 @@
       border-radius: 8px; padding: 24px 28px;
       margin-bottom: 24px; border: 1px solid; display: none;
     }
-    .trip-verdict.go      { background: var(--green-bg); border-color: rgba(22,163,74,0.4); }
-    .trip-verdict.caution { background: var(--amber-bg); border-color: rgba(217,119,6,0.4); }
-    .trip-verdict.nogo    { background: var(--red-bg);   border-color: rgba(220,38,38,0.4); }
+    .trip-verdict.go      { background: var(--green-bg);  border-color: rgba(22,163,74,0.4); }
+    .trip-verdict.caution { background: var(--amber-bg);  border-color: rgba(217,119,6,0.4); }
+    .trip-verdict.nogo    { background: var(--orange-bg); border-color: rgba(234,88,12,0.4); }
 
     .verdict-header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
     .verdict-icon   { font-size: 28px; line-height: 1; }
@@ -986,12 +1017,18 @@
     }
     .trip-verdict.go      .verdict-rec { color: #4ADE80; }
     .trip-verdict.caution .verdict-rec { color: #FCD34D; }
-    .trip-verdict.nogo    .verdict-rec { color: #F87171; }
+    .trip-verdict.nogo    .verdict-rec { color: #FB923C; }
 
     .verdict-route {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px; color: var(--slate); margin-top: 4px;
     }
+    .verdict-freshness {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; color: var(--slate); opacity: 0.6;
+      margin-top: 8px; letter-spacing: 0.3px;
+    }
+    .verdict-freshness.stale { color: #FCD34D; opacity: 1; }
 
     /* ── ACTIONS BAR ── */
     .actions-bar { display: none; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 28px; }
@@ -1019,6 +1056,9 @@
       cursor: pointer; transition: border-color 0.2s, color 0.2s;
     }
     .btn-action:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-efb { border-color: rgba(99,102,241,0.3); color: #A5B4FC; }
+    .btn-efb:hover { border-color: #A5B4FC; color: #C7D2FE; }
+    .btn-efb.copied { border-color: var(--green) !important; color: #4ADE80 !important; }
 
     /* ── LEG SECTION ── */
     .leg-section { margin-bottom: 40px; }
@@ -1060,7 +1100,7 @@
     }
     .leg-rec-go      { background: rgba(22,163,74,0.15);  color: #4ADE80; border: 1px solid rgba(22,163,74,0.3); }
     .leg-rec-caution { background: rgba(217,119,6,0.15);  color: #FCD34D; border: 1px solid rgba(217,119,6,0.3); }
-    .leg-rec-nogo    { background: rgba(220,38,38,0.15);  color: #F87171; border: 1px solid rgba(220,38,38,0.3); }
+    .leg-rec-nogo    { background: rgba(234,88,12,0.15);  color: #FB923C; border: 1px solid rgba(234,88,12,0.3); }
 
     /* ── ROUTE INTELLIGENCE PANEL ── */
     .route-panel {
@@ -1097,7 +1137,7 @@
       white-space: nowrap;
     }
     .route-panel-status.warn   { color: #FCD34D; opacity: 1; }
-    .route-panel-status.nogo   { color: #F87171; opacity: 1; }
+    .route-panel-status.nogo   { color: #FB923C; opacity: 1; }
     .route-panel-status.pass   { color: #4ADE80; opacity: 1; }
     .route-panel-body {
       padding: 0 24px 20px;
@@ -1206,7 +1246,7 @@
     }
     .card-rec.go      { background: rgba(22,163,74,0.15);  color: #4ADE80; }
     .card-rec.caution { background: rgba(217,119,6,0.15);  color: #FCD34D; }
-    .card-rec.nogo    { background: rgba(220,38,38,0.15);  color: #F87171; }
+    .card-rec.nogo    { background: rgba(234,88,12,0.15);  color: #FB923C; }
 
     .card-expand-hint {
       font-family: 'IBM Plex Mono', monospace;
@@ -1282,6 +1322,11 @@
     .metric-value.warn { color: #FCD34D; }
     .metric-value.fail { color: #F87171; }
     .metric-value.pass { color: #4ADE80; }
+    .metric-note {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px; color: var(--slate); opacity: 0.6;
+      margin-top: 3px; letter-spacing: 0.3px;
+    }
 
     .mins-title {
       font-family: 'IBM Plex Mono', monospace;
@@ -1429,6 +1474,7 @@
 
     /* Elements that exist only for PDF output — hidden in normal view */
     #pdf-signature { display: none; }
+    #pdf-student-signature { display: none; }
 
     /* ── PRINT / PDF ── */
     @media print {
@@ -1477,7 +1523,7 @@
       .trip-verdict { border: 2px solid #333; background: #f5f5f5 !important; margin-bottom: 20px; display: block !important; }
       .trip-verdict.go      { border-color: #16A34A; }
       .trip-verdict.caution { border-color: #D97706; }
-      .trip-verdict.nogo    { border-color: #DC2626; }
+      .trip-verdict.nogo    { border-color: #EA580C; }
       .verdict-title  { color: #444 !important; opacity: 1; }
       .verdict-rec, .verdict-icon, .verdict-route { color: #111 !important; }
 
@@ -1542,7 +1588,7 @@
       .card-rec { opacity: 1; }
       .card-rec.go      { background: #d1fae5 !important; color: #166534 !important; }
       .card-rec.caution { background: #fef3c7 !important; color: #92400e !important; }
-      .card-rec.nogo    { background: #fee2e2 !important; color: #991b1b !important; }
+      .card-rec.nogo    { background: #fff0e8 !important; color: #9a3412 !important; }
       .no-taf-notice { color: #555 !important; opacity: 1; }
       .no-taf-notice a { color: #1d4ed8 !important; }
       .card-role { color: #666 !important; opacity: 1; }
@@ -1676,42 +1722,49 @@
         border-radius: 3px;
       }
 
-      /* ── CFI signature block ── */
+      /* ── CFI & Student signature blocks ── */
       /* Hidden outside print via base rule below; shown in print unless sig-hidden is set */
-      #pdf-signature {
+      #pdf-signature, #pdf-student-signature {
         display: block;
         padding-top: 24px;
         page-break-inside: avoid; break-inside: avoid;
       }
-      #pdf-signature.sig-hidden { display: none !important; }
-      #pdf-signature .sig-title {
+      #pdf-signature.sig-hidden,
+      #pdf-student-signature.sig-hidden { display: none !important; }
+      #pdf-signature .sig-title,
+      #pdf-student-signature .sig-title {
         font-family: 'IBM Plex Mono', monospace;
         font-size: 8pt; letter-spacing: 1.5px;
         text-transform: uppercase; color: #333;
         margin-bottom: 18px;
       }
-      #pdf-signature .sig-grid {
+      #pdf-signature .sig-grid,
+      #pdf-student-signature .sig-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         gap: 24px;
         margin-bottom: 24px;
       }
-      #pdf-signature .sig-field {
+      #pdf-signature .sig-field,
+      #pdf-student-signature .sig-field {
         border-bottom: 1px solid #333;
         padding-bottom: 3px;
         min-height: 28px;
       }
-      #pdf-signature .sig-field-label {
+      #pdf-signature .sig-field-label,
+      #pdf-student-signature .sig-field-label {
         font-family: 'IBM Plex Mono', monospace;
         font-size: 7pt; color: #666;
         margin-top: 4px;
       }
-      #pdf-signature .sig-remarks {
+      #pdf-signature .sig-remarks,
+      #pdf-student-signature .sig-remarks {
         border-bottom: 1px solid #333;
         min-height: 40px;
         margin-bottom: 4px;
       }
-      #pdf-signature .sig-remarks-label {
+      #pdf-signature .sig-remarks-label,
+      #pdf-student-signature .sig-remarks-label {
         font-family: 'IBM Plex Mono', monospace;
         font-size: 7pt; color: #666;
         margin-top: 4px;
@@ -1721,11 +1774,32 @@
 </head>
 
 <body>
+<!-- iOS Add to Home Screen banner — shown only on iOS Safari, not in standalone mode -->
+<div id="iosInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;
+  background:#0D1E38;border-top:1px solid rgba(200,164,77,0.4);padding:14px 16px 20px;
+  box-shadow:0 -4px 24px rgba(0,0,0,0.5);">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;max-width:520px;margin:0 auto;">
+    <div style="display:flex;align-items:center;gap:12px;flex:1;">
+      <img src="ca_favicon_package/apple-touch-icon.png" alt="" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#C8A44D;margin-bottom:4px;">Add to Home Screen</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#CBD5E1;line-height:1.5;">
+          Tap <strong style="color:#F8FAFC;">Share</strong>
+          <span style="display:inline-block;background:rgba(255,255,255,0.1);border-radius:4px;padding:1px 5px;margin:0 2px;font-size:13px;">⬆</span>
+          then <strong style="color:#F8FAFC;">"Add to Home Screen"</strong> to use CA Preflight as a full-screen app.
+        </div>
+      </div>
+    </div>
+    <button onclick="dismissInstallBanner()" style="background:none;border:none;color:#64748B;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;">✕</button>
+  </div>
+  <!-- Arrow pointing toward Safari share button (bottom center-right on iPhone) -->
+  <div style="text-align:center;margin-top:10px;font-size:20px;color:#C8A44D;animation:bounce 1.5s infinite;">↓</div>
+</div>
 <div class="wrap">
 
   <header>
     <div class="logo-block">
-      <img src="Logo.png" alt="Central Aviation" class="logo-img">
+      <img src="LogoTransparent.png" alt="Central Aviation" class="logo-img">
       <div class="logo-text">
         <div class="tool">Preflight</div>
       </div>
@@ -2166,7 +2240,14 @@
         <span class="leg-count-note" id="legCountNote"></span>
       </div>
 
-      <button class="btn-brief" id="briefBtn" onclick="getBriefing()">
+      <label class="tou-acknowledge" id="touAckWrap">
+        <input type="checkbox" id="touAckCheck" onchange="
+          document.getElementById('briefBtn').disabled = !this.checked;
+        ">
+        <span class="tou-acknowledge-text">I acknowledge this tool is a supplemental aid only. The Pilot in Command bears sole responsibility for the safety of the flight (FAR 91.3). Data may be stale or incomplete.</span>
+      </label>
+
+      <button class="btn-brief" id="briefBtn" onclick="getBriefing()" disabled>
         <span class="btn-text">Request Briefing</span>
         <div class="spinner"></div>
       </button>
@@ -2179,11 +2260,12 @@
     <div class="verdict-header">
       <div class="verdict-icon" id="verdictIcon"></div>
       <div>
-        <div class="verdict-title">Trip Go / No-Go</div>
+        <div class="verdict-title">Conditions vs. Minimums</div>
         <div class="verdict-rec" id="verdictRec"></div>
       </div>
     </div>
     <div class="verdict-route" id="verdictRoute"></div>
+    <div class="verdict-freshness" id="verdictFreshness"></div>
   </div>
 
   <div class="actions-bar" id="actionsBar">
@@ -2191,8 +2273,20 @@
       <input type="checkbox" id="cfiSignoffToggle" checked>
       <span class="cfi-toggle-text">CFI Sign-Off Page</span>
     </label>
+    <label class="cfi-toggle-label" id="studentToggleWrap" title="Include a student confirmation block on the final page of the PDF">
+      <input type="checkbox" id="studentSignoffToggle">
+      <span class="cfi-toggle-text">Student Confirmation</span>
+    </label>
     <button class="btn-action" onclick="printReport()">Print / Save PDF</button>
     <button class="btn-action" onclick="saveReport()">Save as Text</button>
+    <button class="btn-action btn-efb" id="foreflightBtn" onclick="sendToForeFlight()"
+      title="Opens ForeFlight on iPad/iPhone and populates your route — requires ForeFlight app">
+      → ForeFlight
+    </button>
+    <button class="btn-action btn-efb" id="copyRouteBtn" onclick="copyRouteString()"
+      title="Copy route string for Garmin Pilot, FltPlan.com, or any EFB">
+      Copy Route
+    </button>
   </div>
 
   <div id="legReports"></div>
@@ -2218,13 +2312,36 @@
     <div class="sig-remarks-label">Remarks / Conditions / Limitations</div>
   </div>
 
+  <!-- PDF-only student confirmation block — hidden in normal view, shown on print -->
+  <div id="pdf-student-signature">
+    <div class="sig-title">Student Confirmation</div>
+    <div class="sig-grid">
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">Student Signature</div>
+      </div>
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">Printed Name &amp; Certificate No.</div>
+      </div>
+      <div>
+        <div class="sig-field"></div>
+        <div class="sig-field-label">Date &amp; Time</div>
+      </div>
+    </div>
+    <div class="sig-remarks"></div>
+    <div class="sig-remarks-label">I confirm I have reviewed this preflight briefing and understand the conditions described.</div>
+  </div>
+
   <footer>
     <div class="disclaimer">
       This report is generated automatically and does not replace an official pilot weather briefing.
       Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.
+      The Pilot in Command bears sole responsibility for the safety of the flight (FAR 91.3).
+      Data may be stale or incomplete. By requesting this briefing the PIC acknowledged these terms.
       Central Aviation
     </div>
-    <img src="Logo.png" alt="Central Aviation" class="footer-logo">
+    <img src="LogoTransparent.png" alt="Central Aviation" class="footer-logo">
   </footer>
 
 </div>
@@ -3336,6 +3453,13 @@
     const err = document.getElementById('errorMsg');
     err.style.display = 'none';
 
+    // Belt-and-suspenders: verify acknowledgement is checked
+    if (!document.getElementById('touAckCheck')?.checked) {
+      err.textContent = 'Please acknowledge the terms above before requesting a briefing.';
+      err.style.display = 'block';
+      return;
+    }
+
     const tz          = document.getElementById('tzSelect').value;
     const mins        = getMinimums();
     const flightRulesMode = document.querySelector('input[name="flightRules"]:checked')?.value || 'VFR';
@@ -3489,32 +3613,32 @@
     const hasConvectiveSigmet = data.legs.some(l =>
       l.routeIntelligence?.convectiveSigmets?.length > 0
     );
-    if (hasConvectiveSigmet) allRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
+    if (hasConvectiveSigmet) allRecs.push('BELOW MINIMUMS — CONVECTIVE SIGMET ACTIVE ON ROUTE');
 
     // Active SIGMETs on route drive minimum caution
     const hasSigmet = data.legs.some(l =>
       l.routeIntelligence?.sigmets?.length > 0
     );
-    if (hasSigmet && !hasConvectiveSigmet) allRecs.push('GO WITH CAUTION — SIGMET ACTIVE ON ROUTE');
+    if (hasSigmet && !hasConvectiveSigmet) allRecs.push('MARGINAL — SIGMET ACTIVE ON ROUTE');
 
     // CONUS boundary exit drives caution
     const hasConus = data.legs.some(l => l.routeIntelligence?.conusWarning);
-    if (hasConus) allRecs.push('GO WITH CAUTION — ROUTE EXITS CONUS');
+    if (hasConus) allRecs.push('MARGINAL — ROUTE EXITS CONUS');
 
     // Strong headwind drives concern
     data.legs.forEach(l => {
       const hwc = l.routeIntelligence?.headwindConcern;
       if (hwc) allRecs.push(hwc.severity === 'nogo'
-        ? `NO-GO — HEADWIND ${hwc.component}KTS AT CRUISE`
-        : `GO WITH CAUTION — HEADWIND ${hwc.component}KTS AT CRUISE`);
+        ? `BELOW MINIMUMS — HEADWIND ${hwc.component}KTS AT CRUISE`
+        : `MARGINAL — HEADWIND ${hwc.component}KTS AT CRUISE`);
     });
 
     // Icing concern drives concern
     data.legs.forEach(l => {
       const ic = l.routeIntelligence?.icingConcern;
       if (ic) allRecs.push(ic.severity === 'nogo'
-        ? 'NO-GO — ICING RISK AT CRUISE ALTITUDE'
-        : 'GO WITH CAUTION — FREEZING LEVEL NEAR CRUISE ALTITUDE');
+        ? 'BELOW MINIMUMS — ICING RISK AT CRUISE ALTITUDE'
+        : 'MARGINAL — FREEZING LEVEL NEAR CRUISE ALTITUDE');
     });
 
     const tripRec = deriveTripRec(allRecs);
@@ -3527,21 +3651,52 @@
       legs.map(l => `${l.departure}→${l.arrival}`).join('  ·  ') +
       `  ·  ${new Date().toLocaleString('en-US', { timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:false })} ${tzAbbr(tz)}`;
 
+    // Data freshness — find oldest METAR observation across all stations
+    const freshnessEl = document.getElementById('verdictFreshness');
+    if (freshnessEl) {
+      let oldestObsMs = null;
+      let oldestStation = null;
+      data.legs.forEach(leg => {
+        (leg.reports || []).forEach(r => {
+          if (r.metarTime) {
+            const t = new Date(r.metarTime).getTime();
+            if (!isNaN(t) && (oldestObsMs === null || t < oldestObsMs)) {
+              oldestObsMs = t;
+              oldestStation = r.station;
+            }
+          }
+        });
+      });
+      if (oldestObsMs) {
+        const nowMs    = Date.now();
+        const ageMin   = Math.round((nowMs - oldestObsMs) / 60000);
+        const obsUtc   = new Date(oldestObsMs).toLocaleString('en-US',
+          { timeZone:'UTC', hour:'2-digit', minute:'2-digit', hour12:false });
+        const stale    = ageMin > 90;
+        freshnessEl.className = 'verdict-freshness' + (stale ? ' stale' : '');
+        freshnessEl.textContent = stale
+          ? `⚠ Weather data ${ageMin} min old (oldest obs: ${obsUtc}Z at ${oldestStation}) — verify current conditions`
+          : `Weather data current as of ${obsUtc}Z · ${ageMin} min old`;
+      } else {
+        freshnessEl.textContent = '';
+      }
+    }
+
     data.legs.forEach((leg, i) => {
       const legStationRecs = leg.reports.map(r => r.recommendation);
       const ri = leg.routeIntelligence;
       if (ri?.convectiveSigmets?.length > 0)
-        legStationRecs.push('NO-GO — CONVECTIVE SIGMET ACTIVE ON ROUTE');
+        legStationRecs.push('BELOW MINIMUMS — CONVECTIVE SIGMET ACTIVE ON ROUTE');
       if (ri?.conusWarning)
-        legStationRecs.push('GO WITH CAUTION — ROUTE EXITS CONUS');
+        legStationRecs.push('MARGINAL — ROUTE EXITS CONUS');
       if (ri?.headwindConcern)
         legStationRecs.push(ri.headwindConcern.severity === 'nogo'
-          ? `NO-GO — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`
-          : `GO WITH CAUTION — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`);
+          ? `BELOW MINIMUMS — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`
+          : `MARGINAL — HEADWIND ${ri.headwindConcern.component}KTS AT CRUISE`);
       if (ri?.icingConcern)
         legStationRecs.push(ri.icingConcern.severity === 'nogo'
-          ? 'NO-GO — ICING RISK AT CRUISE ALTITUDE'
-          : 'GO WITH CAUTION — FREEZING LEVEL NEAR CRUISE ALTITUDE');
+          ? 'BELOW MINIMUMS — ICING RISK AT CRUISE ALTITUDE'
+          : 'MARGINAL — FREEZING LEVEL NEAR CRUISE ALTITUDE');
       const legRec  = deriveTripRec(legStationRecs);
       const recCls  = tripClass(legRec);
 
@@ -3580,6 +3735,7 @@
     window._lastLegs        = legs;
     window._lastTz          = tz;
     window._lastFlightRules = flightRulesMode || flightRules;
+    window._reportSaved     = false; // reset on each new brief
 
     // Back-populate distNm on legs from route intelligence
     data.legs.forEach((leg, i) => {
@@ -3611,28 +3767,32 @@
   // ── RECOMMENDATION HELPERS ──
   function deriveTripRec(recs) {
     const filtered = recs.filter(r => r);
-    if (filtered.some(r => r.includes('VFR NOT LEGAL'))) return 'NO-GO — VFR NOT LEGAL AT ONE OR MORE STATIONS';
-    if (filtered.some(r => r.startsWith('NO-GO')))       return 'NO-GO — BELOW MINIMUMS AT ONE OR MORE STATIONS';
-    if (filtered.some(r => r.includes('CAUTION')))       return 'GO WITH CAUTION — REVIEW ALL STATION CONCERNS';
-    return 'GO — CONDITIONS ACCEPTABLE AT ALL STATIONS';
+    if (filtered.some(r => r.startsWith('NOT LEGAL')))       return 'NOT LEGAL — VFR CONDITIONS NOT MET AT ONE OR MORE STATIONS';
+    if (filtered.some(r => r.startsWith('BELOW MINIMUMS') || r.startsWith('NO-GO')))
+                                                             return 'BELOW MINIMUMS — REVIEW REQUIRED AT ONE OR MORE STATIONS';
+    if (filtered.some(r => r.startsWith('MARGINAL') || r.includes('CAUTION')))
+                                                             return 'MARGINAL — REVIEW ALL STATION CONCERNS';
+    return 'WITHIN MINIMUMS AT ALL STATIONS';
   }
 
   function tripClass(rec) {
-    if (rec.startsWith('NO-GO'))  return 'nogo';
-    if (rec.includes('CAUTION'))  return 'caution';
+    if (!rec) return 'go';
+    if (rec.startsWith('NOT LEGAL') || rec.startsWith('BELOW MINIMUMS') || rec.startsWith('NO-GO')) return 'nogo';
+    if (rec.startsWith('MARGINAL') || rec.includes('CAUTION')) return 'caution';
     return 'go';
   }
 
   function tripIcon(rec) {
-    if (rec.startsWith('NO-GO'))  return '✖';
-    if (rec.includes('CAUTION'))  return '⚠';
+    if (!rec) return '✔';
+    if (rec.startsWith('NOT LEGAL') || rec.startsWith('BELOW MINIMUMS') || rec.startsWith('NO-GO')) return '✖';
+    if (rec.startsWith('MARGINAL') || rec.includes('CAUTION')) return '⚠';
     return '✔';
   }
 
   function recClass(rec) {
     if (!rec) return 'go';
-    if (rec.startsWith('NO-GO'))  return 'nogo';
-    if (rec.includes('CAUTION'))  return 'caution';
+    if (rec.startsWith('NOT LEGAL') || rec.startsWith('BELOW MINIMUMS') || rec.startsWith('NO-GO')) return 'nogo';
+    if (rec.startsWith('MARGINAL') || rec.includes('CAUTION')) return 'caution';
     return 'go';
   }
 
@@ -4048,7 +4208,7 @@
 
     // Source of no-go — current conditions vs arrival forecast
     const arrivalRec  = arrA ? arrA.recommendation : null;
-    const noGoSource  = r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')
+    const noGoSource  = r.recommendation.startsWith('BELOW MINIMUMS') || r.recommendation.startsWith('NOT LEGAL') || r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')
       ? '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--slate);opacity:0.7;display:block;margin-top:3px;">current conditions only</span>'
       : '';
 
@@ -4060,6 +4220,12 @@
             <div class="card-role">${role}</div>
             <div class="card-station">${r.station}</div>
             <div class="card-station-name">${r.stationName || ''}</div>
+            ${r.stationType && /AWOS-1|AWOS-2|AWOS-A/i.test(r.stationType)
+              ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#FCD34D;margin-top:2px;">⚠ ${r.stationType} — limited reporting</div>`
+              : r.stationType
+                ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--slate);opacity:0.5;margin-top:2px;">${r.stationType}</div>`
+                : ''
+            }
           </div>
           <div class="card-summary-right">
             <div class="flight-cat ${catClass}">${depA.flightCategory || '—'}</div>
@@ -4219,6 +4385,7 @@
             <div class="metric">
               <div class="metric-label">Density Alt</div>
               <div class="metric-value ${daClass}">${daDisplay}</div>
+              <div class="metric-note">${daResult ? (daResult.humidityUsed ? 'humidity corrected' : 'no dewpoint — dry air assumed') : ''}</div>
             </div>
             <div class="metric">
               <div class="metric-label">Met Category</div>
@@ -4851,12 +5018,14 @@
       leg.reports.forEach((r, j) => {
         const role = j === 0 ? 'Departure' : j === 1 ? 'Arrival' : `Stop ${j + 1}`;
         lines.push('');
-        lines.push(`── ${role.toUpperCase()}: ${r.station}${r.stationName ? ' — ' + r.stationName : ''} ──`);
+        const typeNote = r.stationType && /AWOS-1|AWOS-2|AWOS-A/i.test(r.stationType)
+          ? ` [${r.stationType} — limited reporting]` : r.stationType ? ` [${r.stationType}]` : '';
+        lines.push(`── ${role.toUpperCase()}: ${r.station}${r.stationName ? ' — ' + r.stationName : ''}${typeNote} ──`);
         lines.push(`Overall: ${r.recommendation}`);
 
         // Current conditions / no-go source note
         const arrivalRec = r.arrivalAnalysis ? r.arrivalAnalysis.recommendation : null;
-        if (r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')) {
+        if (r.recommendation.startsWith('BELOW MINIMUMS') || r.recommendation.startsWith('NOT LEGAL') || r.recommendation.startsWith('NO-GO') && arrivalRec && !arrivalRec.startsWith('NO-GO')) {
           lines.push('  ⚠ No-go is from current conditions only — forecast at arrival is passing.');
         }
         lines.push('');
@@ -4929,6 +5098,16 @@
     lines.push('═'.repeat(50));
     lines.push('This report does not replace an official weather briefing.');
     lines.push('Always obtain a full briefing via 1800wxbrief.com or ForeFlight before flight.');
+    lines.push('The Pilot in Command bears sole responsibility for the safety of the flight (FAR 91.3).');
+    lines.push('Data may be stale or incomplete.');
+    // Record who acknowledged and when
+    const picForAck  = document.getElementById('picName')?.value?.trim() || '—';
+    const ackTime    = new Date().toLocaleString('en-US', {
+      timeZone: window._lastTz || 'UTC',
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    lines.push(`PIC Acknowledgement: ${picForAck} acknowledged these terms at ${ackTime}.`);
     lines.push('');
     lines.push('═'.repeat(50));
     lines.push('KNOWN LIMITATIONS — WHAT THIS TOOL DOES NOT CHECK');
@@ -4946,13 +5125,14 @@
     }
     lines.push('');
 
-    const routeSlug  = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
+    const waypoints  = [window._lastLegs[0].departure, ...window._lastLegs.map(l => l.arrival)];
     const dateSlug   = flightDate !== '—' ? flightDate : new Date().toISOString().slice(0, 10);
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const a    = document.createElement('a');
     a.href     = URL.createObjectURL(blob);
-    a.download = `CA-Preflight-${routeSlug}-${dateSlug}.txt`;
+    a.download = `${dateSlug}-CAPreflight-${waypoints.join('-')}.txt`;
     a.click();
+    window._reportSaved = true;
   }
 
   // ── PDF HEADER ──
@@ -4989,24 +5169,25 @@
   function printReport() {
     populatePdfHeader();
 
-    const includeCfi = document.getElementById('cfiSignoffToggle')?.checked !== false;
-    const sig = document.getElementById('pdf-signature');
+    const includeCfi     = document.getElementById('cfiSignoffToggle')?.checked !== false;
+    const includeStudent = document.getElementById('studentSignoffToggle')?.checked === true;
+    const sig     = document.getElementById('pdf-signature');
+    const stuSig  = document.getElementById('pdf-student-signature');
 
     // Toggle class rather than inline style — inline style loses to @media print !important
-    if (sig) sig.classList.toggle('sig-hidden', !includeCfi);
+    if (sig)    sig.classList.toggle('sig-hidden',    !includeCfi);
+    if (stuSig) stuSig.classList.toggle('sig-hidden', !includeStudent);
 
     // Set document title so Chrome uses it as the default PDF filename.
-    // Pattern: CA-Preflight-KIAD-KATL_KATL-KLEX-2026-03-19
-    // Uses flight date (not today) since briefs are often prepared the day before.
     const originalTitle = document.title;
     if (window._lastLegs && window._lastLegs.length > 0) {
-      const routeSlug  = window._lastLegs.map(l => `${l.departure}-${l.arrival}`).join('_');
       const flightDate = document.getElementById('flightDate')?.value || new Date().toISOString().slice(0, 10);
-      document.title = `CA-Preflight-${routeSlug}-${flightDate}`;
+      const waypoints = [window._lastLegs[0].departure, ...window._lastLegs.map(l => l.arrival)];
+      document.title = `${flightDate}-CAPreflight-${waypoints.join('-')}`;
     }
 
-    // Inject hard page-break divs before each leg section (except the first)
-    // and optionally before the CFI signature block.
+    // Inject hard page-break divs before each leg section (except the first),
+    // and before each signature block that is included.
     const legSections = document.querySelectorAll('.leg-section');
     const insertedBreaks = [];
     legSections.forEach((el, i) => {
@@ -5019,7 +5200,7 @@
       }
     });
 
-    // Insert page break before CFI signature only if it's included
+    // Page break before CFI block if included
     if (includeCfi && sig) {
       const br = document.createElement('div');
       br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
@@ -5028,12 +5209,123 @@
       insertedBreaks.push(br);
     }
 
-    window.print();
+    // Page break before student block if included (and CFI block not directly above it)
+    if (includeStudent && stuSig) {
+      const br = document.createElement('div');
+      br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
+      br.setAttribute('data-print-break', '1');
+      stuSig.parentNode.insertBefore(br, stuSig);
+      insertedBreaks.push(br);
+    }
 
-    // Clean up: restore document title, remove sig-hidden so base CSS hides element, remove injected breaks
+    window.print();
+    window._reportSaved = true; // PDF print counts as saving the report
+
+    // Clean up
     document.title = originalTitle;
-    if (sig) sig.classList.remove('sig-hidden');
+    if (sig)    sig.classList.remove('sig-hidden');
+    if (stuSig) stuSig.classList.remove('sig-hidden');
     insertedBreaks.forEach(el => el.parentNode && el.parentNode.removeChild(el));
+  }
+
+  // ── EFB INTEGRATION ──
+
+  // Build a standard DCT route string from the current legs
+  // e.g. KIAD DCT KJFK  or  KIAD DCT KBWI DCT KJFK
+  function buildRouteString() {
+    if (!window._lastLegs || window._lastLegs.length === 0) return null;
+    const waypoints = [window._lastLegs[0].departure, ...window._lastLegs.map(l => l.arrival)];
+    return waypoints.join(' DCT ');
+  }
+
+  // Prompt to save report if not already saved this session
+  function promptSaveIfNeeded(actionLabel) {
+    if (window._reportSaved) return true;
+    return confirm(
+      `Save your briefing report before opening ${actionLabel}?\n\n` +
+      `Click OK to save the text report first, then click "${actionLabel}" again.\n` +
+      `Click Cancel to proceed without saving.`
+    );
+  }
+
+  function sendToForeFlight() {
+    const route = buildRouteString();
+    if (!route) return;
+
+    if (!window._reportSaved) {
+      const save = confirm(
+        'Save your briefing report before opening ForeFlight?\n\n' +
+        'OK — save PDF or text report now (then click → ForeFlight again)\n' +
+        'Cancel — open ForeFlight without saving'
+      );
+      if (save) { saveReport(); return; }
+    }
+
+    // ForeFlight URL scheme — works on iPad/iPhone with ForeFlight installed
+    // Format: foreflightmobile://maps/search?q=KIAD+DCT+KJFK
+    const query = route.replace(/ /g, '+');
+    const url   = `foreflightmobile://maps/search?q=${query}`;
+
+    // Attempt to open — if ForeFlight isn't installed or we're on desktop,
+    // the browser will do nothing (no error thrown). Show a fallback message.
+    const win = window.open(url, '_self');
+    // On desktop the URL scheme won't open anything — detect after a short delay
+    setTimeout(() => {
+      const btn = document.getElementById('foreflightBtn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Sent to ForeFlight';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2500);
+      }
+    }, 300);
+  }
+
+  function copyRouteString() {
+    const route = buildRouteString();
+    if (!route) return;
+
+    if (!window._reportSaved) {
+      const save = confirm(
+        'Save your briefing report before copying the route?\n\n' +
+        'OK — save PDF or text report now (then click Copy Route again)\n' +
+        'Cancel — copy route without saving'
+      );
+      if (save) { saveReport(); return; }
+    }
+
+    navigator.clipboard.writeText(route).then(() => {
+      const btn = document.getElementById('copyRouteBtn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = `✓ Copied: ${route}`;
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 3000);
+      }
+    }).catch(() => {
+      // Clipboard API not available — show the string in a prompt for manual copy
+      prompt('Copy this route string for Garmin Pilot, FltPlan.com, or any EFB:', route);
+    });
+  }
+
+  // ── iOS ADD TO HOME SCREEN BANNER ──
+  (function() {
+    const isIos        = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = navigator.standalone === true;
+    const dismissed    = sessionStorage.getItem('ca_install_dismissed');
+    if (isIos && !isStandalone && !dismissed) {
+      // Small delay so it doesn't compete with page load
+      setTimeout(() => {
+        const banner = document.getElementById('iosInstallBanner');
+        if (banner) banner.style.display = 'block';
+      }, 2000);
+    }
+  })();
+
+  function dismissInstallBanner() {
+    const banner = document.getElementById('iosInstallBanner');
+    if (banner) banner.style.display = 'none';
+    sessionStorage.setItem('ca_install_dismissed', '1');
   }
 
   function showError(msg) {
