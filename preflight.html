@@ -3771,16 +3771,24 @@
           'M_FZLVL': 'Multiple Freezing Levels',
         }[a.hazard] || a.hazard;
 
+        // Format altitude — base/top are in feet MSL from parseAlt
+        const fmtAlt = ft => ft === 0 ? 'SFC' : ft >= 1000 ? `${(ft/1000).toFixed(0)}k ft` : `${ft}ft`;
         const altStr  = (a.base !== null && a.top !== null && a.top > 0)
-          ? ` · ${a.base === 0 ? 'SFC' : (a.base/100).toFixed(0)+'k'}–${(a.top/100).toFixed(0)}k ft` : '';
+          ? ` · ${fmtAlt(a.base)}–${fmtAlt(a.top)}` : '';
         const sevStr  = a.severity ? ` · ${a.severity}` : '';
-        const dueStr  = a.dueTo ? `<div class="advisory-note">${a.dueTo}</div>` : '';
+
+        // Suppress due_to when it's just the hazard code repeated (e.g. "ICE" for ICE advisory)
+        const dueTo   = (a.dueTo && a.dueTo.toUpperCase() !== a.hazard) ? a.dueTo : null;
+        const dueStr  = dueTo ? `<div class="advisory-note">${dueTo}</div>` : '';
         const icingAt = a.atCruiseAlt
           ? ` <span style="font-weight:600;color:var(--red);">⚠ AT CRUISE ALT</span>` : '';
-        const cls     = a.atCruiseAlt ? 'nogo' : 'warn';
+
+        // FZLVL advisories are informational — de-emphasize visually
+        const cls      = a.atCruiseAlt ? 'nogo' : a.isFzlvl ? 'info' : 'warn';
+        const icon     = a.isFzlvl ? 'ℹ' : '⚠';
         const validStr = a.validTo ? ` · Valid to ${formatUtcForDisplay(a.validTo)}` : '';
         const fcstTag  = a.forecastHour > 0 ? ` <span style="font-size:8px;opacity:0.6;">FCST +${a.forecastHour}HR</span>` : '';
-        html += `<div class="route-advisory ${cls}">⚠ ${hazardLabel}${sevStr}${altStr}${icingAt}${validStr}${fcstTag}
+        html += `<div class="route-advisory ${cls}">${icon} ${hazardLabel}${sevStr}${altStr}${icingAt}${validStr}${fcstTag}
           ${dueStr}
         </div>`;
       }
@@ -4543,14 +4551,17 @@
               'SFC_WND':'Surface Winds','LLWS':'Low-Level Wind Shear',
               'ICE':'Icing','FZLVL':'Freezing Level','M_FZLVL':'Multiple Freezing Levels',
             }[a.hazard] || a.hazard;
+            const fmtAlt   = ft => ft === 0 ? 'SFC' : ft >= 1000 ? `${(ft/1000).toFixed(0)}kft` : `${ft}ft`;
             const alt      = (a.base !== null && a.top !== null && a.top > 0)
-              ? ` ${a.base === 0 ? 'SFC' : (a.base/100).toFixed(0)+'kft'}–${(a.top/100).toFixed(0)}kft` : '';
+              ? ` ${fmtAlt(a.base)}–${fmtAlt(a.top)}` : '';
             const sev      = a.severity ? ` · ${a.severity}` : '';
             const atCruise = a.atCruiseAlt ? ' ⚠ AT CRUISE ALT' : '';
-            const validStr = a.validTo ? ` valid to ${formatUtcForDisplay(a.validTo)}` : '';
             const fcstStr  = a.forecastHour > 0 ? ` FCST+${a.forecastHour}hr` : '';
-            lines.push(`  ⚠ ${hazardLabel}${sev}${alt}${atCruise}${fcstStr}${validStr}`);
-            if (a.dueTo) lines.push(`     ${a.dueTo}`);
+            const validStr = a.validTo ? ` valid to ${formatUtcForDisplay(a.validTo)}` : '';
+            const icon     = a.isFzlvl ? 'i' : '⚠';
+            const dueTo    = (a.dueTo && a.dueTo.toUpperCase() !== a.hazard) ? a.dueTo : null;
+            lines.push(`  ${icon} ${hazardLabel}${sev}${alt}${atCruise}${fcstStr}${validStr}`);
+            if (dueTo) lines.push(`     ${dueTo}`);
           });
         } else {
           lines.push('G-AIRMETs: None active near route');
