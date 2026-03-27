@@ -3779,7 +3779,8 @@
           ? ` <span style="font-weight:600;color:var(--red);">⚠ AT CRUISE ALT</span>` : '';
         const cls     = a.atCruiseAlt ? 'nogo' : 'warn';
         const validStr = a.validTo ? ` · Valid to ${formatUtcForDisplay(a.validTo)}` : '';
-        html += `<div class="route-advisory ${cls}">⚠ ${hazardLabel}${sevStr}${altStr}${icingAt}${validStr}
+        const fcstTag  = a.forecastHour > 0 ? ` <span style="font-size:8px;opacity:0.6;">FCST +${a.forecastHour}HR</span>` : '';
+        html += `<div class="route-advisory ${cls}">⚠ ${hazardLabel}${sevStr}${altStr}${icingAt}${validStr}${fcstTag}
           ${dueStr}
         </div>`;
       }
@@ -4547,7 +4548,8 @@
             const sev      = a.severity ? ` · ${a.severity}` : '';
             const atCruise = a.atCruiseAlt ? ' ⚠ AT CRUISE ALT' : '';
             const validStr = a.validTo ? ` valid to ${formatUtcForDisplay(a.validTo)}` : '';
-            lines.push(`  ⚠ ${hazardLabel}${sev}${alt}${atCruise}${validStr}`);
+            const fcstStr  = a.forecastHour > 0 ? ` FCST+${a.forecastHour}hr` : '';
+            lines.push(`  ⚠ ${hazardLabel}${sev}${alt}${atCruise}${fcstStr}${validStr}`);
             if (a.dueTo) lines.push(`     ${a.dueTo}`);
           });
         } else {
