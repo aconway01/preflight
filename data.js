@@ -310,7 +310,7 @@ const CA_DATA = {
       category: 'Altitude Limitations',
       severity: 'warn',
       items: [
-        { title: 'Winds Aloft Above 18,000ft',  detail: 'The winds aloft query uses level=low which covers 3,000–18,000ft only. IFR flights at FL200 and above receive no wind data. The cruise altitude input is capped at 17,500ft for VFR.' },
+        { title: 'Winds Aloft Above 18,000ft',  detail: 'For IFR flights with cruise altitude above 18,000ft, the tool requests level=mid data (up to FL390) if the nearest FD station supports it. For VFR flights the cruise altitude input is capped at 17,500ft and level=low is always used.' },
         { title: 'Density Altitude Thresholds', detail: 'Caution and no-go density altitude thresholds are set in instructor minimums and are not yet aircraft-specific. Aircraft-specific DA limits will be added with the aircraft profile feature.' },
       ],
     },
@@ -328,7 +328,8 @@ const CA_DATA = {
       items: [
         { title: 'Winds Aloft Validity Window', detail: 'The tool dynamically selects the appropriate NWS FD forecast cycle (24Z, 06Z, 12Z, or 18Z) based on the current UTC time. The active cycle is shown next to the winds aloft station label. Winds aloft data covers 3,000–18,000ft only (level=low).' },
         { title: 'Advisory Cache TTLs',         detail: 'G-AIRMETs are cached 15 minutes, SIGMETs 10 minutes, PIREPs 5 minutes. An advisory issued immediately after a cache refresh will not appear until the TTL expires. In rapidly developing convective situations, re-request the briefing.' },
-        { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will use night minimums for the arrival analysis. However, the minimums panel tab must be manually set to VFR Night (or Solo Night) to edit personal night minimums before requesting the brief — the active panel tab at brief generation is recorded in the report.' },
+        { title: 'Day/Night Minimums Auto-Detection', detail: 'Night minimums are applied per station based on calculated sunrise/sunset at the station location. A flight that departs in daylight but arrives after sunset will automatically use night minimums for the arrival analysis. All minimums for all relevant modes (day and night) are recorded in the text report regardless of which tab was active at brief generation.' },
+        { title: 'Wind-Adjusted Flight Time Estimate', detail: 'The wind-adjusted time in the logbook summary uses a TAS proxy derived from your entered flight time and route distance (TAS = distance ÷ entered hours). If your entered time already incorporates a wind correction, the adjustment may double-count the wind effect and produce an inaccurate estimate. The figure is clearly labelled as an estimate and should not replace proper flight planning. Aircraft-specific TAS will be used once Phase 3 aircraft profiles are available.' },
       ],
     },
     {
