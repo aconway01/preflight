@@ -2,8 +2,6 @@
 
 A preflight planning and documentation platform for Part 61 flight training operations. Built for a single-CFI operation at KMRB (Eastern WV Regional), deployable to any small flight school or independent instructor.
 
-https://aconway01.github.io/preflight/preflight.html
-
 ---
 
 ## Overview
@@ -137,7 +135,6 @@ Personal minimums are set in the app UI and stored in the browser session. They 
 | W&B / Performance | Phase 3 — not yet implemented |
 | Icing / freezing level | PIREPs surfaced; dedicated analysis not yet implemented |
 | Winds aloft | 3,000–18,000ft only (`level=low`) |
-| G-AIRMET field mapping | Unverified against live data — run `debugGairmetFields()` when advisories are active |
 | International routes | CONUS only for winds aloft and G-AIRMETs; METARs/TAFs still valid |
 
 This tool does not replace an official weather briefing. Always obtain a standard weather briefing from 1800wxbrief.com, ForeFlight, or another FAA-approved source before every flight.
