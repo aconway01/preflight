@@ -1031,7 +1031,7 @@
     .verdict-freshness.stale { color: #FCD34D; opacity: 1; }
 
     /* ── ACTIONS BAR ── */
-    .actions-bar { display: none; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .actions-bar { display: none; justify-content: flex-end; align-items: center; gap: 10px; row-gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
     .actions-bar.visible { display: flex; }
 
     .cfi-toggle-label {
@@ -1056,7 +1056,7 @@
       cursor: pointer; transition: border-color 0.2s, color 0.2s;
     }
     .btn-action:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-efb { border-color: rgba(99,102,241,0.3); color: #A5B4FC; }
+    .btn-efb { border-color: rgba(99,102,241,0.3); color: #A5B4FC; white-space: nowrap; }
     .btn-efb:hover { border-color: #A5B4FC; color: #C7D2FE; }
     .btn-efb.copied { border-color: var(--green) !important; color: #4ADE80 !important; }
 
@@ -3943,7 +3943,7 @@
     } else if (ri.cruiseAlt) {
       html += `<div class="route-section">
         <div class="route-section-label">Winds Aloft</div>
-        <div class="route-advisory info">Winds aloft data unavailable for this location.</div>
+        <div class="route-advisory info">Winds aloft data unavailable — this may be a temporary issue between FD forecast cycles. Re-run the preflight check to retry.</div>
       </div>`;
     }
 
