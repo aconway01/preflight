@@ -2248,7 +2248,7 @@
       </label>
 
       <button class="btn-brief" id="briefBtn" onclick="getBriefing()" disabled>
-        <span class="btn-text">Request Briefing</span>
+        <span class="btn-text">Run Preflight Check</span>
         <div class="spinner"></div>
       </button>
     </div>
@@ -2283,9 +2283,13 @@
       title="Opens ForeFlight on iPad/iPhone and populates your route — requires ForeFlight app">
       → ForeFlight
     </button>
-    <button class="btn-action btn-efb" id="copyRouteBtn" onclick="copyRouteString()"
-      title="Copy route string for Garmin Pilot, FltPlan.com, or any EFB">
-      Copy Route
+    <button class="btn-action btn-efb" id="garminPilotBtn" onclick="copyRouteString('garmin')"
+      title="Copies DCT route string to clipboard — paste into Garmin Pilot route entry">
+      → Garmin Pilot
+    </button>
+    <button class="btn-action btn-efb" id="fltplanBtn" onclick="copyRouteString('fltplan')"
+      title="Copies DCT route string to clipboard — paste into FltPlan.com route entry">
+      → FltPlan
     </button>
   </div>
 
@@ -5281,30 +5285,33 @@
     }, 300);
   }
 
-  function copyRouteString() {
+  function copyRouteString(target) {
     const route = buildRouteString();
     if (!route) return;
 
+    const appName = target === 'garmin' ? 'Garmin Pilot' : 'FltPlan';
+    const btnId   = target === 'garmin' ? 'garminPilotBtn' : 'fltplanBtn';
+
     if (!window._reportSaved) {
       const save = confirm(
-        'Save your briefing report before copying the route?\n\n' +
-        'OK — save PDF or text report now (then click Copy Route again)\n' +
-        'Cancel — copy route without saving'
+        `Save your briefing report before copying to ${appName}?\n\n` +
+        `OK — save PDF or text report now (then click → ${appName} again)\n` +
+        `Cancel — copy route without saving`
       );
       if (save) { saveReport(); return; }
     }
 
     navigator.clipboard.writeText(route).then(() => {
-      const btn = document.getElementById('copyRouteBtn');
+      const btn = document.getElementById(btnId);
       if (btn) {
         const orig = btn.textContent;
-        btn.textContent = `✓ Copied: ${route}`;
+        btn.textContent = `✓ Copied for ${appName}`;
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 3000);
       }
     }).catch(() => {
       // Clipboard API not available — show the string in a prompt for manual copy
-      prompt('Copy this route string for Garmin Pilot, FltPlan.com, or any EFB:', route);
+      prompt(`Copy this route string into ${appName}:`, route);
     });
   }
 
