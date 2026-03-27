@@ -2,6 +2,8 @@
 
 A preflight planning and decision-support tool for Part 61 flight training operations. Designed for use by independent CFIs, small flight schools, and recreational pilots. Deployable to any operation with no backend infrastructure beyond a free Google Apps Script account.
 
+https://aconway01.github.io/preflight/preflight.html
+
 > **Decision-support tool only.** This application does not constitute an official FAA weather briefing and makes no go/no-go determination. The Pilot in Command bears sole responsibility for the safety of the flight under FAR 91.3. Always obtain a full standard briefing from 1800wxbrief.com, ForeFlight, or a certificated FSS before flight.
 
 ---
