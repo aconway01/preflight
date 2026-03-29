@@ -1031,8 +1031,19 @@
     .verdict-freshness.stale { color: #FCD34D; opacity: 1; }
 
     /* ── ACTIONS BAR ── */
-    .actions-bar { display: none; justify-content: flex-end; align-items: center; gap: 10px; row-gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+    .actions-bar { display: none; justify-content: flex-end; align-items: flex-start; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
     .actions-bar.visible { display: flex; }
+    .actions-group { display: flex; flex-direction: column; gap: 8px; }
+    .actions-group-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--slate); opacity: 0.45;
+    }
+    .actions-group-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .actions-group-divider {
+      width: 1px; align-self: stretch; margin-top: 18px;
+      background: rgba(200,164,77,0.15);
+    }
 
     .cfi-toggle-label {
       display: flex; align-items: center; gap: 7px;
@@ -1376,6 +1387,7 @@
 
     /* Raw data section */
     .raw-section { padding: 14px 18px; }
+    .raw-section.raw-section-inline { padding: 0 0 10px 0; }
     .raw-section-label {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px; letter-spacing: 2px;
@@ -1475,6 +1487,7 @@
     /* Elements that exist only for PDF output — hidden in normal view */
     #pdf-signature { display: none; }
     #pdf-student-signature { display: none; }
+    #pdf-limitations { display: none; }
 
     /* ── PRINT / PDF ── */
     @media print {
@@ -1721,6 +1734,33 @@
         padding: 2px 10px;
         border-radius: 3px;
       }
+
+      /* ── Limitations block ── */
+      #pdf-limitations {
+        display: block;
+        padding-top: 24px;
+      }
+      #pdf-limitations.lim-hidden { display: none !important; }
+      .pdf-lim-title {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 8pt; letter-spacing: 1.5px;
+        text-transform: uppercase; color: #333;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 6px; margin-bottom: 14px;
+      }
+      .pdf-lim-category {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 7pt; letter-spacing: 1px;
+        text-transform: uppercase; color: #555;
+        margin: 10px 0 4px;
+      }
+      .pdf-lim-item {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 7pt; color: #333;
+        margin-bottom: 5px; padding-left: 10px;
+      }
+      .pdf-lim-item-title { font-weight: 600; }
+      .pdf-lim-item-detail { color: #666; }
 
       /* ── CFI & Student signature blocks ── */
       /* Hidden outside print via base rule below; shown in print unless sig-hidden is set */
@@ -2269,28 +2309,39 @@
   </div>
 
   <div class="actions-bar" id="actionsBar">
-    <label class="cfi-toggle-label" id="cfiToggleWrap" title="Include a CFI sign-off block on the final page of the PDF">
-      <input type="checkbox" id="cfiSignoffToggle" checked>
-      <span class="cfi-toggle-text">CFI Sign-Off Page</span>
-    </label>
-    <label class="cfi-toggle-label" id="studentToggleWrap" title="Include a student confirmation block on the final page of the PDF">
-      <input type="checkbox" id="studentSignoffToggle">
-      <span class="cfi-toggle-text">Student Confirmation</span>
-    </label>
-    <button class="btn-action" onclick="printReport()">Print / Save PDF</button>
-    <button class="btn-action" onclick="saveReport()">Save as Text</button>
-    <button class="btn-action btn-efb" id="foreflightBtn" onclick="sendToForeFlight()"
-      title="Opens ForeFlight on iPad/iPhone and populates your route — requires ForeFlight app">
-      → ForeFlight
-    </button>
-    <button class="btn-action btn-efb" id="garminPilotBtn" onclick="copyRouteString('garmin')"
-      title="Copies DCT route string to clipboard — paste into Garmin Pilot route entry">
-      → Garmin Pilot
-    </button>
-    <button class="btn-action btn-efb" id="fltplanBtn" onclick="copyRouteString('fltplan')"
-      title="Copies DCT route string to clipboard — paste into FltPlan.com route entry">
-      → FltPlan
-    </button>
+    <div class="actions-group">
+      <div class="actions-group-label">Report</div>
+      <div class="actions-group-items">
+        <label class="cfi-toggle-label" id="cfiToggleWrap" title="Include a CFI sign-off block on the final page of the PDF">
+          <input type="checkbox" id="cfiSignoffToggle" checked>
+          <span class="cfi-toggle-text">CFI Sign-Off</span>
+        </label>
+        <label class="cfi-toggle-label" id="studentToggleWrap" title="Include a student confirmation block on the final page of the PDF">
+          <input type="checkbox" id="studentSignoffToggle">
+          <span class="cfi-toggle-text">Student Confirmation</span>
+        </label>
+        <button class="btn-action" onclick="printReport()">Print / Save PDF</button>
+        <button class="btn-action" onclick="saveReport()">Save as Text</button>
+      </div>
+    </div>
+    <div class="actions-group-divider"></div>
+    <div class="actions-group">
+      <div class="actions-group-label">Send to EFB</div>
+      <div class="actions-group-items">
+        <button class="btn-action btn-efb" id="foreflightBtn" onclick="sendToForeFlight()"
+          title="Opens ForeFlight on iPad/iPhone and populates your route — requires ForeFlight app">
+          → ForeFlight
+        </button>
+        <button class="btn-action btn-efb" id="garminPilotBtn" onclick="copyRouteString('garmin')"
+          title="Copies DCT route string to clipboard — paste into Garmin Pilot route entry">
+          → Garmin Pilot
+        </button>
+        <button class="btn-action btn-efb" id="fltplanBtn" onclick="copyRouteString('fltplan')"
+          title="Copies DCT route string to clipboard — paste into FltPlan.com route entry">
+          → FltPlan
+        </button>
+      </div>
+    </div>
   </div>
 
   <div id="legReports"></div>
@@ -2335,6 +2386,12 @@
     </div>
     <div class="sig-remarks"></div>
     <div class="sig-remarks-label">I confirm I have reviewed this preflight briefing and understand the conditions described.</div>
+  </div>
+
+  <!-- PDF-only limitations block — hidden in normal view, populated on print -->
+  <div id="pdf-limitations">
+    <div class="pdf-lim-title">Known Limitations — What This Tool Does Not Check</div>
+    <div id="pdf-limitations-content"></div>
   </div>
 
   <footer>
@@ -3825,7 +3882,7 @@
       if (hasNogo)          { statusText = 'Airspace/wind alert'; statusCls = 'nogo'; }
       else if (hasWarn)     { statusText = 'Advisories present';  statusCls = 'warn'; }
       else if (hasSfraInside) { statusText = 'Operating in SFRA'; statusCls = 'warn'; }
-      else if (ri.windsAloft) { statusText = `Winds ${ri.windsAloft.forecastCycle || ''}Z cycle`; statusCls = ''; }
+      else if (ri.windsAloft) { statusText = `Winds aloft · FD valid ${ri.windsAloft.validTime || '—'}`; statusCls = ''; }
     }
 
     let html = `
@@ -3879,7 +3936,7 @@
       const levelNote = wa.levelUsed === 'mid' ? ' · Mid Level' : '';
       const cacheNote = `<span style="font-size:8px;opacity:0.5;margin-left:6px;">20min cache</span>`;
       html += `<div class="route-section">
-        <div class="route-section-label">Winds Aloft · Nearest Station: ${wa.station || '—'}${wa.forecastCycle ? ` · Cycle: ${wa.forecastCycle}Z${levelNote}` : ''}${cacheNote}</div>`;
+        <div class="route-section-label">Winds Aloft · Nearest Station: ${wa.station || '—'}${wa.validTime ? ` · FD valid ${wa.validTime}${levelNote}` : ''}${cacheNote}</div>`;
 
       // ── Interpolated cruise wind row ──
       if (wa.cruiseWind && wa.cruiseWind.windDir !== null) {
@@ -4363,7 +4420,11 @@
             <div class="block-title">Concerns</div>
             ${concernsHtml}
           </div>
-          ${rawMetar ? `<div class="metar-raw" style="margin-bottom:10px;">${rawMetar}</div>` : ''}
+          ${rawMetar ? `
+            <div class="raw-section raw-section-inline">
+              <div class="raw-section-label">Raw METAR</div>
+              <div class="metar-raw">${rawMetar}</div>
+            </div>` : ''}
           ${notesHtml ? `<div class="notes-block" style="margin-bottom:10px;"><div class="block-title" style="opacity:0.6;">Notes</div>${notesHtml}</div>` : ''}
           <div class="metrics">
             <div class="metric">
@@ -4846,7 +4907,7 @@
         // Winds aloft
         if (ri.windsAloft && ri.windsAloft.levels && ri.windsAloft.levels.length > 0) {
           const wa         = ri.windsAloft;
-          const cycleLabel = wa.forecastCycle ? ` (${wa.forecastCycle}Z cycle, 20min cache)` : '';
+          const cycleLabel = wa.validTime ? ` (FD valid ${wa.validTime}, 20min cache)` : '';
           const levelLabel = wa.levelUsed === 'mid' ? ' mid-level' : '';
           lines.push(`Winds Aloft${levelLabel} (${wa.station || '?'})${cycleLabel}:`);
 
@@ -5168,6 +5229,20 @@
     });
     parts.push(`Generated: ${new Date().toLocaleString('en-US', { timeZone: tz, dateStyle: 'medium', timeStyle: 'short' })} ${tzAbbr(tz)}`);
     metaEl.textContent = parts.join('  ·  ');
+
+    // Populate PDF limitations block
+    const limContent = document.getElementById('pdf-limitations-content');
+    if (limContent && CA_DATA && CA_DATA.LIMITATIONS) {
+      limContent.innerHTML = CA_DATA.LIMITATIONS.map(cat =>
+        `<div class="pdf-lim-category">${cat.category}</div>` +
+        cat.items.map(item =>
+          `<div class="pdf-lim-item">
+            <span class="pdf-lim-item-title">${item.title} — </span>
+            <span class="pdf-lim-item-detail">${item.detail}</span>
+          </div>`
+        ).join('')
+      ).join('');
+    }
   }
 
   function printReport() {
@@ -5177,6 +5252,7 @@
     const includeStudent = document.getElementById('studentSignoffToggle')?.checked === true;
     const sig     = document.getElementById('pdf-signature');
     const stuSig  = document.getElementById('pdf-student-signature');
+    const limEl   = document.getElementById('pdf-limitations');
 
     // Toggle class rather than inline style — inline style loses to @media print !important
     if (sig)    sig.classList.toggle('sig-hidden',    !includeCfi);
@@ -5191,7 +5267,7 @@
     }
 
     // Inject hard page-break divs before each leg section (except the first),
-    // and before each signature block that is included.
+    // and before each signature block and the limitations block.
     const legSections = document.querySelectorAll('.leg-section');
     const insertedBreaks = [];
     legSections.forEach((el, i) => {
@@ -5213,12 +5289,21 @@
       insertedBreaks.push(br);
     }
 
-    // Page break before student block if included (and CFI block not directly above it)
+    // Page break before student block if included
     if (includeStudent && stuSig) {
       const br = document.createElement('div');
       br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
       br.setAttribute('data-print-break', '1');
       stuSig.parentNode.insertBefore(br, stuSig);
+      insertedBreaks.push(br);
+    }
+
+    // Limitations always get their own page at the end
+    if (limEl) {
+      const br = document.createElement('div');
+      br.style.cssText = 'page-break-before:always;break-before:page;height:0;overflow:hidden;';
+      br.setAttribute('data-print-break', '1');
+      limEl.parentNode.insertBefore(br, limEl);
       insertedBreaks.push(br);
     }
 
