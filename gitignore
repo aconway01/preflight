@@ -1,0 +1,25 @@
+# Design & internal docs
+CentralAviation-Preflight-DesignSpec.md
+
+# React / Vite
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverrideIcon
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
