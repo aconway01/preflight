@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- PWA / iOS home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CA Preflight" />
+    <link rel="apple-touch-icon" href="%BASE_URL%ca_favicon_package/apple-touch-icon.png" />
+    <link rel="manifest" href="%BASE_URL%manifest.json" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="48x48" href="%BASE_URL%ca_favicon_package/ca_icon_48.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%ca_favicon_package/ca_icon_32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%ca_favicon_package/ca_icon_16.png" />
+
+    <!-- IBM Plex fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Central Aviation Preflight</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+/* ============================================================
+   Central Aviation Preflight — Design Token System
+   All color, typography, and spacing tokens live here.
+   Tailwind config mirrors these values — use Tailwind classes
+   in components; use these CSS variables in global/base styles.
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ── Color tokens ── */
+  --color-base:         #0D1120;
+  --color-surface:      #141926;
+  --color-surface-2:    #1C2333;
+  --color-border:       #2A3347;
+
+  --color-text-primary:   #E2E4EA;
+  --color-text-secondary: #8B90A0;
+  --color-text-muted:     #555F75;
+
+  --color-brand-navy:   #1B2A4A;
+  --color-brand-gold:   #B8963E;
+
+  --color-within:       #4ADE80;
+  --color-marginal:     #FBBF24;
+  --color-below:        #FB923C;
+  --color-hazard:       #F87171;
+
+  /* ── Typography ── */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Scale */
+  --text-display: 1.5rem;
+  --text-title:   1.125rem;
+  --text-body:    1rem;
+  --text-label:   0.875rem;
+  --text-small:   0.75rem;
+  --text-mono:    0.875rem;
+
+  /* Weights */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Line heights */
+  --leading-tight:  1.3;
+  --leading-snug:   1.4;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.6;
+
+  /* ── Spacing (8pt grid) ── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+
+  /* ── Motion ── */
+  --transition-moment: 200ms ease-out;
+  --transition-expand: 150ms ease;
+  --transition-status: 100ms ease-in;
+}
+
+/* ── Base reset / global defaults ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+/* Monospace elements inherit the mono font */
+code, kbd, pre, samp,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Hide native number-input spinners on the cruise altitude field */
+#cruise-alt::-webkit-outer-spin-button,
+#cruise-alt::-webkit-inner-spin-button {
+  display: none;
+}
+#cruise-alt {
+  -moz-appearance: textfield;
+}

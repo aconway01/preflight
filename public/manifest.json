@@ -2,10 +2,10 @@
   "name": "Central Aviation Preflight",
   "short_name": "CA Preflight",
   "description": "Preflight planning and weather briefing tool",
-  "start_url": "./preflight.html",
+  "start_url": "/preflight/",
   "display": "standalone",
-  "background_color": "#0A1628",
-  "theme_color": "#1C2E4A",
+  "background_color": "#0D1120",
+  "theme_color": "#0D1120",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -22,7 +22,13 @@
       "src": "ca_favicon_package/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "ca_favicon_package/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
