@@ -1,90 +1,126 @@
 import React, { useState, useRef, useCallback } from 'react'
-import IntentMoment      from './components/intent/IntentMoment'
 import LoadingMoment     from './components/LoadingMoment'
 import ErrorMoment       from './components/ErrorMoment'
-import ReviewMoment      from './components/ReviewMoment'
 import DispatchMoment    from './components/DispatchMoment'
 import LimitationsModal  from './components/LimitationsModal'
-import { buildPreflightUrl } from './utils/buildPreflightUrl'
+
+// V2 state machine
+// 'route-entry' → 'fetching' → 'planning' → 'finalizing' → 'acknowledging'
+//               → 'context' → 'summary' → 'dispatch'
+// Any state → 'error' on fetch failure
+// 'planning' → 'refreshing' → 'planning' on route modification + refresh
 
 export default function App() {
-  const [appState,        setAppState]       = useState('intent')   // 'intent'|'loading'|'error'|'review'|'dispatch'
+  const [appState,        setAppState]       = useState('route-entry')
   const [weatherData,     setWeatherData]    = useState(null)
   const [apiError,        setApiError]       = useState(null)
   const [showLimitations, setShowLimitations] = useState(false)
   const [lastPayload,     setLastPayload]    = useState(null)
 
   const abortRef        = useRef(null)
-  const reviewScrollRef = useRef(0)
+  const summaryScrollRef = useRef(0)
 
-  const handleSubmit = useCallback(async (payload) => {
-    // Connectivity check
+  // ── Fetch helper — used by both initial fetch and finalization ───
+  const runFetch = useCallback(async (url, payload, { onSuccess, transitionState }) => {
     if (!navigator.onLine) {
       setApiError({ type: 'offline' })
       setAppState('error')
       return
     }
-
-    // Abort any previous in-flight request
     if (abortRef.current) abortRef.current.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
     setLastPayload(payload)
-    setAppState('loading')
+    setAppState(transitionState)
     setApiError(null)
 
     try {
-      const url = buildPreflightUrl(payload)
       const res = await fetch(url, { signal: controller.signal })
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-
-      // Treat partial responses gracefully — show review with a warning
       if (data?.status === 'partial') {
         setWeatherData(data)
         setApiError({ type: 'partial', message: data?.error || null, data })
         setAppState('error')
         return
       }
-
-      setWeatherData(data)
-      setAppState('review')
+      onSuccess(data)
     } catch (err) {
-      if (err.name === 'AbortError') return   // user navigated back — ignore
+      if (err.name === 'AbortError') return
       setApiError({ type: 'api', message: err.message })
       setAppState('error')
     }
   }, [])
 
-  const handleBack = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort()
-      abortRef.current = null
-    }
-    setAppState('intent')
-    setApiError(null)
-  }, [])
+  // route-entry → fetching → planning
+  const handleRouteCommit = useCallback((url, payload) => {
+    runFetch(url, payload, {
+      transitionState: 'fetching',
+      onSuccess: (data) => {
+        setWeatherData(data)
+        setAppState('planning')
+      },
+    })
+  }, [runFetch])
 
-  const handleRetry = useCallback(() => {
-    // Return to intent so the pilot can re-submit (or adjust inputs first)
-    setAppState('intent')
-    setApiError(null)
-  }, [])
+  // planning → refreshing → planning
+  const handleRefresh = useCallback((url, payload) => {
+    runFetch(url, payload, {
+      transitionState: 'refreshing',
+      onSuccess: (data) => {
+        setWeatherData(data)
+        setAppState('planning')
+      },
+    })
+  }, [runFetch])
 
+  // planning → finalizing → acknowledging
+  const handleFinalize = useCallback((url, payload) => {
+    runFetch(url, payload, {
+      transitionState: 'finalizing',
+      onSuccess: (data) => {
+        setWeatherData(data)
+        setAppState('acknowledging')
+      },
+    })
+  }, [runFetch])
+
+  // acknowledging → context
+  const handleAcknowledge = useCallback(() => setAppState('context'), [])
+
+  // context → summary
+  const handleContextContinue = useCallback(() => setAppState('summary'), [])
+
+  // summary → dispatch
   const handleDispatch = useCallback(() => {
-    reviewScrollRef.current = window.scrollY
+    summaryScrollRef.current = window.scrollY
     setAppState('dispatch')
     window.scrollTo(0, 0)
   }, [])
 
+  // summary ← dispatch
   const handleBackFromDispatch = useCallback(() => {
-    setAppState('review')
-    requestAnimationFrame(() => window.scrollTo(0, reviewScrollRef.current))
+    setAppState('summary')
+    requestAnimationFrame(() => window.scrollTo(0, summaryScrollRef.current))
+  }, [])
+
+  // summary → planning (adjust plan)
+  const handleAdjustPlan = useCallback(() => setAppState('planning'), [])
+
+  // Back to route entry from any state
+  const handleBackToRouteEntry = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    setAppState('route-entry')
+    setApiError(null)
+  }, [])
+
+  const handleRetry = useCallback(() => {
+    setAppState('route-entry')
+    setApiError(null)
   }, [])
 
   return (
@@ -108,46 +144,70 @@ export default function App() {
 
       {/* Moment content */}
 
-      {/* IntentMoment stays mounted at all times so all hook state is preserved across
-          loading / review / error transitions. Only the wrapper visibility changes. */}
-      <div style={{ display: appState === 'intent' ? 'contents' : 'none' }}>
-        <IntentMoment onSubmit={handleSubmit} />
-      </div>
-
-      {appState === 'loading' && (
-        <LoadingMoment onBack={handleBack} />
+      {(appState === 'route-entry') && (
+        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
+            Route entry — Stage 2
+          </p>
+        </div>
       )}
+
+      {(appState === 'fetching' || appState === 'refreshing' || appState === 'finalizing') && (
+        <LoadingMoment onBack={handleBackToRouteEntry} />
+      )}
+
       {appState === 'error' && (
         <ErrorMoment
           error={apiError}
-          onBack={handleBack}
+          onBack={handleBackToRouteEntry}
           onRetry={handleRetry}
         />
       )}
-      {/* ReviewMoment stays mounted across review↔dispatch transitions so section
-          expand/collapse state and scroll position are naturally preserved. */}
-      {weatherData && (appState === 'review' || appState === 'dispatch') && (
-        <div style={{ display: appState === 'review' ? 'contents' : 'none' }}>
-          <ReviewMoment
+
+      {appState === 'planning' && (
+        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
+            Planning surface — Stage 2
+          </p>
+        </div>
+      )}
+
+      {appState === 'acknowledging' && (
+        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
+            Acknowledgement — Stage 6
+          </p>
+        </div>
+      )}
+
+      {appState === 'context' && (
+        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
+            Context — Stage 6
+          </p>
+        </div>
+      )}
+
+      {appState === 'summary' && (
+        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
+            Summary — Stage 6
+          </p>
+        </div>
+      )}
+
+      {/* DispatchMoment stays mounted across summary↔dispatch transitions */}
+      {weatherData && (appState === 'summary' || appState === 'dispatch') && (
+        <div style={{ display: appState === 'dispatch' ? 'contents' : 'none' }}>
+          <DispatchMoment
             data={weatherData}
-            onBack={handleBack}
-            onDispatch={handleDispatch}
-            readiness={lastPayload?.readiness}
-            cruiseAlt={lastPayload?.flight?.cruiseAlt}
-            isIFR={!!lastPayload?.flight?.isIFR}
             payload={lastPayload}
+            onBack={handleBackFromDispatch}
           />
         </div>
       )}
-      {appState === 'dispatch' && (
-        <DispatchMoment
-          data={weatherData}
-          payload={lastPayload}
-          onBack={handleBackFromDispatch}
-        />
-      )}
 
-      {/* Persistent footer — visible on all moments */}
+      {/* Persistent footer */}
       <footer
         className="flex-shrink-0 px-4 py-3"
         style={{ borderTop: '1px solid var(--color-border)' }}
@@ -156,16 +216,16 @@ export default function App() {
           <button
             onClick={() => setShowLimitations(true)}
             style={{
-              background:     'none',
-              border:         'none',
-              cursor:         'pointer',
-              color:          'var(--color-text-muted)',
-              fontFamily:     'var(--font-sans)',
-              fontSize:       'var(--text-small)',
-              textDecoration: 'underline',
+              background:          'none',
+              border:              'none',
+              cursor:              'pointer',
+              color:               'var(--color-text-muted)',
+              fontFamily:          'var(--font-sans)',
+              fontSize:            'var(--text-small)',
+              textDecoration:      'underline',
               textDecorationColor: 'var(--color-border)',
               textUnderlineOffset: '3px',
-              padding:        '4px 0',
+              padding:             '4px 0',
             }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)' }}

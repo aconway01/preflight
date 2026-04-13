@@ -1,5 +1,6 @@
 # Design & internal docs
 CentralAviation-Preflight-DesignSpec.md
+CentralAviation-Preflight-DesignSpec-V2.md
 
 # Google Apps Script backend (contains API token)
 Code.gs

@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
 
+// ── Identifier helpers ────────────────────────────────────────────
+
 // Normalize a typed identifier to 4-char ICAO format.
-// 3-char identifiers that don't start with K are US domestic (FAA format) —
-// prepend K to produce the ICAO equivalent (IAD → KIAD, CVG → KCVG).
+// 3-char US domestic identifiers (FAA format) get a K prefix: IAD → KIAD.
 // 4-char identifiers (KIAD, EGLL, CYYZ, PANC) are returned unchanged.
-// Anything else is returned as-is for the caller to flag as invalid.
+// Anything else is returned as-is for the caller to handle.
 export function normalizeId(val) {
   const v = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
   if (v.length === 3 && !v.startsWith('K')) return 'K' + v
@@ -12,26 +13,26 @@ export function normalizeId(val) {
 }
 
 // A committed identifier is valid when it is exactly 4 alphanumeric chars
-// (post-normalization). All stored IDs in the route state are in this form.
+// (post-normalization).
 export function isValidId(val) {
   return /^[A-Z0-9]{4}$/.test((val || '').toUpperCase().trim())
 }
 
-// Character-level cleanup for keystroke handling — no normalization here.
-// Normalization happens on blur in AirportInput, not on every keystroke.
+// Character-level cleanup for keystroke handling.
+// Normalization happens on blur, not on every keystroke.
 function sanitize(v) {
   return (v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)
 }
 
+// ── Hook ─────────────────────────────────────────────────────────
+
 export function useRouteState() {
   const [departure,    setDepartureRaw]   = useState('')
   const [destination,  setDestinationRaw] = useState('')
-  const [stops,        setStops]          = useState([])   // string[]
+  const [stops,        setStops]          = useState([])    // string[]
   const [legWaypoints, setLegWaypoints]   = useState([[]])  // string[][]
 
-  // Tracks how the pilot committed the route — used to choose the editing surface.
-  // Set explicitly by the caller (IntentMoment) rather than auto-set here, so that
-  // the "Edit route" panel in guided mode can re-parse without switching display.
+  // Tracks how the pilot committed the route.
   const [entryMode, setEntryMode] = useState(null)  // null | 'guided' | 'route'
 
   const setDeparture   = useCallback(v => setDepartureRaw(sanitize(v)),   [])
@@ -41,18 +42,20 @@ export function useRouteState() {
   const destinationValid = isValidId(destination)
   const routeReady       = departureValid && destinationValid
 
-  // Only valid (normalized) stops appear as nodes in the schematic
+  // All valid nodes in order: departure, valid stops, destination
   const validStops = stops.filter(isValidId)
   const nodes      = routeReady
     ? [departure, ...validStops, destination]
     : []
 
+  // Per-leg from/to/waypoints — used by the planning surface and fetch URL builder
   const legs = nodes.slice(0, -1).map((from, i) => ({
     from,
     to:        nodes[i + 1],
     waypoints: legWaypoints[i] ?? [],
   }))
 
+  // ── Stop management ───────────────────────────────────────────
   const addStop = useCallback(() => {
     setStops(prev => [...prev, ''])
     setLegWaypoints(prev => [...prev, []])
@@ -75,10 +78,7 @@ export function useRouteState() {
     })
   }, [])
 
-  // Insert an airport stop into the middle of leg at legIndex.
-  // wptSplitAt: the slot index within that leg's waypoint list where the split occurs.
-  // Waypoints before wptSplitAt stay on the first sub-leg; waypoints from wptSplitAt
-  // onward move to the second sub-leg. If omitted, the new leg gets no waypoints.
+  // Insert an airport stop into a leg, splitting its waypoints at wptSplitAt.
   const addStopAtLeg = useCallback((legIndex, id, wptSplitAt) => {
     setStops(prev => {
       const next = [...prev]
@@ -98,8 +98,7 @@ export function useRouteState() {
     })
   }, [])
 
-  // Insert a waypoint at a specific position within a leg's waypoint list.
-  // insertAt=0 puts it before all existing waypoints; insertAt=wpts.length appends.
+  // ── Waypoint management ───────────────────────────────────────
   const insertWaypoint = useCallback((legIndex, insertAt, id) => {
     setLegWaypoints(prev => prev.map((wpts, i) => {
       if (i !== legIndex) return wpts
@@ -115,14 +114,9 @@ export function useRouteState() {
     ))
   }, [])
 
-  // Parse a full route string into departure, stops, and per-leg waypoints.
-  // Airport tokens (3–4 chars) are normalized to 4-char ICAO and become stops.
-  // Nav fix tokens (5 chars, e.g. MAPAX, WITCH) are assigned as waypoints on
-  // the leg they precede — the leg from the last airport to the next airport.
-  //
-  // Example: "KIAD MAPAX KOKV WITCH KFDK KIAD"
-  //   departure = KIAD, stops = [KOKV, KFDK], dest = KIAD
-  //   leg 0 waypoints = [MAPAX], leg 1 waypoints = [WITCH], leg 2 waypoints = []
+  // ── Route string parsing ──────────────────────────────────────
+  // Parse "KIAD MAPAX KOKV WITCH KFDK KIAD" into departure/stops/waypoints.
+  // 3–4 char tokens → airports; 5-char tokens → waypoints on the preceding leg.
   const parseRouteString = useCallback((str) => {
     const parts = str.trim().toUpperCase().split(/\s+/).filter(Boolean)
     if (parts.length < 2) return false
@@ -132,16 +126,14 @@ export function useRouteState() {
     const mid  = parts.slice(1, -1)
 
     const newStops       = []
-    const newLegWpts     = [[]]   // leg 0 waypoints (dep → first stop or dest)
+    const newLegWpts     = [[]]
     let   currentLegWpts = newLegWpts[0]
 
     for (const token of mid) {
       const clean = token.replace(/[^A-Z0-9]/g, '')
       if (clean.length === 5) {
-        // Nav fix — belongs to the current leg
         currentLegWpts.push(clean)
       } else {
-        // Airport — becomes a stop; start a new leg
         newStops.push(normalizeId(sanitize(clean)))
         newLegWpts.push([])
         currentLegWpts = newLegWpts[newLegWpts.length - 1]
@@ -155,16 +147,18 @@ export function useRouteState() {
     return true
   }, [])
 
-  // EFB route string — ICAO identifiers in DCT format for copy/paste
+  // ── Derived route strings ─────────────────────────────────────
+  // EFB-format DCT string: "KIAD DCT MAPAX DCT KOKV DCT KFDK DCT KIAD"
   const routeString = legs.length > 0
     ? legs.map((leg, i) => {
-        const wpts = leg.waypoints.length > 0 ? ' DCT ' + leg.waypoints.join(' DCT ') + ' DCT ' : ' DCT '
+        const wpts = leg.waypoints.length > 0
+          ? ' DCT ' + leg.waypoints.join(' DCT ') + ' DCT '
+          : ' DCT '
         return (i === 0 ? leg.from : '') + wpts + leg.to
       }).join(' ')
     : ''
 
-  // Editable route string — simple space-separated: "KIAD MAPAX KOKV KFDK KIAD"
-  // Always derived from current legs state so it stays in sync with schematic edits.
+  // Human-readable space-separated: "KIAD MAPAX KOKV KFDK KIAD"
   const editableRouteString = legs.length > 0
     ? [legs[0].from, ...legs.flatMap(l => [...l.waypoints, l.to])].join(' ')
     : ''
@@ -177,6 +171,7 @@ export function useRouteState() {
     insertWaypoint, removeWaypoint,
     departureValid, destinationValid, routeReady,
     parseRouteString,
+    normalizeId,
     routeString, editableRouteString,
     entryMode, setEntryMode,
   }
