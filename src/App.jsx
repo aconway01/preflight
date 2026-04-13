@@ -3,6 +3,11 @@ import LoadingMoment     from './components/LoadingMoment'
 import ErrorMoment       from './components/ErrorMoment'
 import DispatchMoment    from './components/DispatchMoment'
 import LimitationsModal  from './components/LimitationsModal'
+import RouteEntry        from './components/planning/RouteEntry'
+import FetchingMoment    from './components/planning/FetchingMoment'
+import PlanningMoment    from './components/planning/PlanningMoment'
+import { useRouteState } from './hooks/useRouteState'
+import { buildAllLegUrls } from './utils/buildLegUrl'
 
 // V2 state machine
 // 'route-entry' → 'fetching' → 'planning' → 'finalizing' → 'acknowledging'
@@ -16,12 +21,15 @@ export default function App() {
   const [apiError,        setApiError]       = useState(null)
   const [showLimitations, setShowLimitations] = useState(false)
   const [lastPayload,     setLastPayload]    = useState(null)
+  const [routeLegs,       setRouteLegs]      = useState([])
+  const [routeModified,   setRouteModified]  = useState(false)
 
+  const routeState   = useRouteState()
   const abortRef        = useRef(null)
   const summaryScrollRef = useRef(0)
 
   // ── Fetch helper — used by both initial fetch and finalization ───
-  const runFetch = useCallback(async (url, payload, { onSuccess, transitionState }) => {
+  const runFetch = useCallback(async (urls, payload, { onSuccess, transitionState }) => {
     if (!navigator.onLine) {
       setApiError({ type: 'offline' })
       setAppState('error')
@@ -36,15 +44,37 @@ export default function App() {
     setApiError(null)
 
     try {
-      const res = await fetch(url, { signal: controller.signal })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      // For V2, fetch all legs in parallel and merge results.
+      // For single-leg routes (most common), there is one URL.
+      const urlArray = Array.isArray(urls) ? urls : [urls]
+      const responses = await Promise.all(
+        urlArray.map(url => fetch(url, { signal: controller.signal }))
+      )
+
+      const failed = responses.find(r => !r.ok)
+      if (failed) throw new Error(`HTTP ${failed.status}`)
+
+      const jsons = await Promise.all(responses.map(r => r.json()))
+
+      // Merge: if single leg, use as-is; otherwise combine legs arrays
+      let data
+      if (jsons.length === 1) {
+        data = jsons[0]
+      } else {
+        // Multi-leg: merge legs arrays from each response
+        data = {
+          ...jsons[0],
+          legs: jsons.flatMap((d, i) => d.legs ?? []),
+        }
+      }
+
       if (data?.status === 'partial') {
         setWeatherData(data)
         setApiError({ type: 'partial', message: data?.error || null, data })
         setAppState('error')
         return
       }
+
       onSuccess(data)
     } catch (err) {
       if (err.name === 'AbortError') return
@@ -54,8 +84,11 @@ export default function App() {
   }, [])
 
   // route-entry → fetching → planning
-  const handleRouteCommit = useCallback((url, payload) => {
-    runFetch(url, payload, {
+  const handleRouteCommit = useCallback((legs) => {
+    const urls = buildAllLegUrls(legs)
+    setRouteLegs(legs)
+    setRouteModified(false)
+    runFetch(urls, { legs }, {
       transitionState: 'fetching',
       onSuccess: (data) => {
         setWeatherData(data)
@@ -65,26 +98,29 @@ export default function App() {
   }, [runFetch])
 
   // planning → refreshing → planning
-  const handleRefresh = useCallback((url, payload) => {
-    runFetch(url, payload, {
+  const handleRefresh = useCallback(() => {
+    const urls = buildAllLegUrls(routeLegs)
+    setRouteModified(false)
+    runFetch(urls, { legs: routeLegs }, {
       transitionState: 'refreshing',
       onSuccess: (data) => {
         setWeatherData(data)
         setAppState('planning')
       },
     })
-  }, [runFetch])
+  }, [runFetch, routeLegs])
 
   // planning → finalizing → acknowledging
-  const handleFinalize = useCallback((url, payload) => {
-    runFetch(url, payload, {
+  const handleFinalize = useCallback(() => {
+    const urls = buildAllLegUrls(routeLegs)
+    runFetch(urls, { legs: routeLegs }, {
       transitionState: 'finalizing',
       onSuccess: (data) => {
         setWeatherData(data)
         setAppState('acknowledging')
       },
     })
-  }, [runFetch])
+  }, [runFetch, routeLegs])
 
   // acknowledging → context
   const handleAcknowledge = useCallback(() => setAppState('context'), [])
@@ -144,15 +180,21 @@ export default function App() {
 
       {/* Moment content */}
 
-      {(appState === 'route-entry') && (
-        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
-          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
-            Route entry — Stage 2
-          </p>
-        </div>
+      {appState === 'route-entry' && (
+        <RouteEntry
+          routeState={routeState}
+          onCommit={handleRouteCommit}
+        />
       )}
 
-      {(appState === 'fetching' || appState === 'refreshing' || appState === 'finalizing') && (
+      {(appState === 'fetching' || appState === 'refreshing') && (
+        <FetchingMoment
+          routeLegs={routeLegs}
+          onBack={handleBackToRouteEntry}
+        />
+      )}
+
+      {appState === 'finalizing' && (
         <LoadingMoment onBack={handleBackToRouteEntry} />
       )}
 
@@ -164,12 +206,14 @@ export default function App() {
         />
       )}
 
-      {appState === 'planning' && (
-        <div className="flex-1 flex flex-col px-4" style={{ maxWidth: '640px', margin: '0 auto', width: '100%', paddingTop: '48px' }}>
-          <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body)' }}>
-            Planning surface — Stage 2
-          </p>
-        </div>
+      {(appState === 'planning' || appState === 'refreshing') && weatherData && (
+        <PlanningMoment
+          weatherData={weatherData}
+          routeLegs={routeLegs}
+          routeModified={routeModified}
+          onRefresh={handleRefresh}
+          onFinalize={handleFinalize}
+        />
       )}
 
       {appState === 'acknowledging' && (

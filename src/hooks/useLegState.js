@@ -165,6 +165,23 @@ export function useLegState() {
     })
   }, [])
 
+  // Bulk-initialize legs from an array of definitions.
+  // legDefinitions: { departure, destination, waypoints, weather }[]
+  // Each leg is set to status 'ready' if weather is present, else 'idle'.
+  const initLegs = useCallback((legDefinitions) => {
+    const initialized = legDefinitions.map(def => {
+      const id  = `leg-${nextId++}`
+      const leg = makeLeg(id, def.departure, def.destination, def.waypoints ?? [])
+      if (def.weather) {
+        leg.weather   = def.weather
+        leg.status    = 'ready'
+        leg.fetchedAt = new Date().toISOString()
+      }
+      return leg
+    })
+    setLegs(initialized)
+  }, [])
+
   const getLegByIndex = useCallback((n) => {
     return legs[n] ?? null
   }, [legs])
@@ -177,6 +194,7 @@ export function useLegState() {
     setLegWeather,
     setLegStatus,
     computeDerivedValues,
+    initLegs,
     getLegByIndex,
   }
 }
