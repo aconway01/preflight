@@ -3,20 +3,21 @@
 // Two-mode route entry panel.
 //
 // Mode A — guided: departure + destination inputs (+ optional stops).
-// Mode B — route string: free-text "KIAD MAPAX KOKV KIAD" input.
+//   "Get weather" button appears when both departure and destination
+//   are valid. Pilot taps it to commit and trigger the fetch.
 //
-// Auto-triggers fetch exactly once when routeReady becomes true
-// (no explicit submit button needed). Uses hasFiredRef to prevent
-// double-firing on re-renders.
+// Mode B — route string: free-text "KIAD MAPAX KOKV KIAD" input.
+//   "Get weather" button parses the string and triggers fetch in one
+//   action. After parseRouteString updates state, a pendingCommit
+//   effect fires onCommit(legs) once routeReady is true.
 //
 // Props:
 //   routeState:    return value of useRouteState()
 //   onCommit:      (routeLegs) => void   — called with leg definitions
 
-import React, { useEffect, useRef, useState } from 'react'
-import { isValidId } from '../../hooks/useRouteState'
+import React, { useEffect, useState } from 'react'
 
-// ── Shared input style ────────────────────────────────────────
+// ── Shared styles ─────────────────────────────────────────────
 
 const inputStyle = {
   width:           '100%',
@@ -36,16 +37,16 @@ const inputStyle = {
 }
 
 const labelStyle = {
-  fontFamily:  'var(--font-sans)',
-  fontSize:    'var(--text-small)',
-  color:       'var(--color-text-muted)',
-  marginBottom:'4px',
-  display:     'block',
+  fontFamily:   'var(--font-sans)',
+  fontSize:     'var(--text-small)',
+  color:        'var(--color-text-muted)',
+  marginBottom: '4px',
+  display:      'block',
 }
 
 // ── Airport input with blur-normalization ─────────────────────
 
-function AirportField({ label, value, onChange, onBlurNormalize, placeholder }) {
+function AirportField({ label, value, onChange, onBlur, placeholder }) {
   return (
     <div>
       <label style={labelStyle}>{label}</label>
@@ -54,7 +55,7 @@ function AirportField({ label, value, onChange, onBlurNormalize, placeholder }) 
         value={value}
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
-        onBlur={e => onBlurNormalize(e.target.value)}
+        onBlur={e => onBlur(e.target.value)}
         style={inputStyle}
         maxLength={5}
         autoCapitalize="characters"
@@ -69,29 +70,26 @@ function AirportField({ label, value, onChange, onBlurNormalize, placeholder }) 
 
 export default function RouteEntry({ routeState, onCommit }) {
   const {
-    departure, setDeparture, destination, setDestination,
+    departure, setDeparture,
+    destination, setDestination,
     stops, addStop, updateStop, removeStop,
     legs, routeReady, normalizeId,
     parseRouteString, editableRouteString,
     entryMode, setEntryMode,
   } = routeState
 
-  const [routeInput, setRouteInput] = useState('')
-  const [routeError, setRouteError] = useState(false)
-  const hasFiredRef = useRef(false)
+  const [routeInput,    setRouteInput]    = useState('')
+  const [routeError,    setRouteError]    = useState(false)
+  const [pendingCommit, setPendingCommit] = useState(false)
 
-  // Auto-trigger fetch exactly once when routeReady becomes true
+  // After route string parse updates state, wait for routeReady then commit
   useEffect(() => {
-    if (routeReady && !hasFiredRef.current) {
-      hasFiredRef.current = true
+    if (pendingCommit && routeReady) {
+      setPendingCommit(false)
       onCommit(legs)
     }
-    if (!routeReady) {
-      hasFiredRef.current = false
-    }
-  }, [routeReady, legs, onCommit])
+  }, [pendingCommit, routeReady, legs, onCommit])
 
-  // Mode toggle
   const activeMode = entryMode ?? 'guided'
 
   function handleModeSwitch(mode) {
@@ -102,35 +100,54 @@ export default function RouteEntry({ routeState, onCommit }) {
     }
   }
 
-  // Route string commit on Enter
-  function handleRouteKeyDown(e) {
-    if (e.key === 'Enter') commitRouteString()
+  // Guided mode — explicit commit
+  function handleGetWeather() {
+    onCommit(legs)
   }
 
-  function commitRouteString() {
+  // Route string mode — parse and commit in one action
+  function handleRouteStringGetWeather() {
     const ok = parseRouteString(routeInput)
     if (!ok) {
       setRouteError(true)
-    } else {
-      setRouteError(false)
-      setEntryMode('guided')
+      return
     }
+    setRouteError(false)
+    // parseRouteString sets state asynchronously; pendingCommit effect
+    // fires onCommit once routeReady becomes true after React re-renders.
+    setPendingCommit(true)
   }
 
-  // Normalize identifier on blur
+  function handleRouteKeyDown(e) {
+    if (e.key === 'Enter') handleRouteStringGetWeather()
+  }
+
   function handleAirportBlur(val, setter) {
     setter(normalizeId(val))
   }
 
   const tabBase = {
-    flex:        1,
-    height:      '36px',
-    background:  'none',
-    border:      'none',
-    cursor:      'pointer',
-    fontFamily:  'var(--font-sans)',
-    fontSize:    'var(--text-label)',
-    transition:  'color 150ms ease',
+    flex:       1,
+    height:     '36px',
+    background: 'none',
+    border:     'none',
+    cursor:     'pointer',
+    fontFamily: 'var(--font-sans)',
+    fontSize:   'var(--text-label)',
+    transition: 'color 150ms ease',
+  }
+
+  const commitBtnStyle = {
+    height:       '48px',
+    background:   'var(--color-brand-gold)',
+    border:       'none',
+    borderRadius: '8px',
+    color:        '#0D1120',
+    fontFamily:   'var(--font-sans)',
+    fontSize:     'var(--text-label)',
+    fontWeight:   600,
+    cursor:       'pointer',
+    width:        '100%',
   }
 
   return (
@@ -140,9 +157,9 @@ export default function RouteEntry({ routeState, onCommit }) {
     >
       {/* Mode tabs */}
       <div style={{
-        display:       'flex',
-        borderBottom:  '1px solid var(--color-border)',
-        marginBottom:  '28px',
+        display:      'flex',
+        borderBottom: '1px solid var(--color-border)',
+        marginBottom: '28px',
       }}>
         {['guided', 'route'].map(mode => (
           <button
@@ -151,10 +168,10 @@ export default function RouteEntry({ routeState, onCommit }) {
             onClick={() => handleModeSwitch(mode)}
             style={{
               ...tabBase,
-              color:         activeMode === mode ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-              borderBottom:  activeMode === mode ? '2px solid var(--color-brand-gold)' : '2px solid transparent',
-              fontWeight:    activeMode === mode ? 500 : 400,
-              marginBottom:  '-1px',
+              color:        activeMode === mode ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              borderBottom: activeMode === mode ? '2px solid var(--color-brand-gold)' : '2px solid transparent',
+              fontWeight:   activeMode === mode ? 500 : 400,
+              marginBottom: '-1px',
             }}
           >
             {mode === 'guided' ? 'Airports' : 'Route string'}
@@ -170,7 +187,7 @@ export default function RouteEntry({ routeState, onCommit }) {
             value={departure}
             placeholder="KIAD"
             onChange={setDeparture}
-            onBlurNormalize={v => handleAirportBlur(v, setDeparture)}
+            onBlur={v => handleAirportBlur(v, setDeparture)}
           />
 
           {stops.map((stop, i) => (
@@ -181,27 +198,25 @@ export default function RouteEntry({ routeState, onCommit }) {
                   value={stop}
                   placeholder="KOKV"
                   onChange={v => updateStop(i, v)}
-                  onBlurNormalize={v => {
-                    updateStop(i, normalizeId(v))
-                  }}
+                  onBlur={v => updateStop(i, normalizeId(v))}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => removeStop(i)}
                 style={{
-                  height:      '48px',
-                  width:       '48px',
-                  flexShrink:  0,
-                  background:  'var(--color-surface-2)',
-                  border:      '1px solid var(--color-border)',
-                  borderRadius:'8px',
-                  color:       'var(--color-text-muted)',
-                  cursor:      'pointer',
-                  fontSize:    '1.1rem',
-                  display:     'flex',
-                  alignItems:  'center',
-                  justifyContent:'center',
+                  height:         '48px',
+                  width:          '48px',
+                  flexShrink:     0,
+                  background:     'var(--color-surface-2)',
+                  border:         '1px solid var(--color-border)',
+                  borderRadius:   '8px',
+                  color:          'var(--color-text-muted)',
+                  cursor:         'pointer',
+                  fontSize:       '1.1rem',
+                  display:        'flex',
+                  alignItems:     'center',
+                  justifyContent: 'center',
                 }}
               >
                 ×
@@ -214,35 +229,39 @@ export default function RouteEntry({ routeState, onCommit }) {
             value={destination}
             placeholder="KOKV"
             onChange={setDestination}
-            onBlurNormalize={v => handleAirportBlur(v, setDestination)}
+            onBlur={v => handleAirportBlur(v, setDestination)}
           />
 
           <button
             type="button"
             onClick={addStop}
             style={{
-              height:        '40px',
-              background:    'none',
-              border:        '1px dashed var(--color-border)',
-              borderRadius:  '8px',
-              color:         'var(--color-text-muted)',
-              fontFamily:    'var(--font-sans)',
-              fontSize:      'var(--text-label)',
-              cursor:        'pointer',
-              marginTop:     '4px',
+              height:       '40px',
+              background:   'none',
+              border:       '1px dashed var(--color-border)',
+              borderRadius: '8px',
+              color:        'var(--color-text-muted)',
+              fontFamily:   'var(--font-sans)',
+              fontSize:     'var(--text-label)',
+              cursor:       'pointer',
             }}
           >
             + Add stop
           </button>
+
+          {/* Commit button — appears when both airports are valid */}
+          {routeReady && (
+            <button type="button" onClick={handleGetWeather} style={commitBtnStyle}>
+              Get weather
+            </button>
+          )}
         </div>
       )}
 
       {/* Route string mode */}
       {activeMode === 'route' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <label style={labelStyle}>
-            Route string
-          </label>
+          <label style={labelStyle}>Route string</label>
           <input
             type="text"
             value={routeInput}
@@ -251,9 +270,9 @@ export default function RouteEntry({ routeState, onCommit }) {
             placeholder="KIAD MAPAX KOKV KIAD"
             style={{
               ...inputStyle,
-              height:        '52px',
-              borderColor:   routeError ? 'var(--color-hazard)' : 'var(--color-border)',
-              letterSpacing: '0.03em',
+              height:      '52px',
+              borderColor: routeError ? 'var(--color-hazard)' : 'var(--color-border)',
+              letterSpacing:'0.03em',
             }}
             autoCapitalize="characters"
             autoCorrect="off"
@@ -266,20 +285,10 @@ export default function RouteEntry({ routeState, onCommit }) {
           )}
           <button
             type="button"
-            onClick={commitRouteString}
-            style={{
-              height:        '44px',
-              background:    'var(--color-surface-2)',
-              border:        '1px solid var(--color-border)',
-              borderRadius:  '8px',
-              color:         'var(--color-text-primary)',
-              fontFamily:    'var(--font-sans)',
-              fontSize:      'var(--text-label)',
-              cursor:        'pointer',
-              fontWeight:    500,
-            }}
+            onClick={handleRouteStringGetWeather}
+            style={commitBtnStyle}
           >
-            Parse route
+            Get weather
           </button>
           <p style={{
             margin:     0,
@@ -288,7 +297,7 @@ export default function RouteEntry({ routeState, onCommit }) {
             color:      'var(--color-text-muted)',
             lineHeight: 1.55,
           }}>
-            3–4 char tokens are treated as airports. 5-char tokens are waypoints on the preceding leg.
+            3–4 char tokens are airports. 5-char tokens are waypoints on the preceding leg.
           </p>
         </div>
       )}

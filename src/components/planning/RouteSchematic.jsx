@@ -1,24 +1,25 @@
 // ── RouteSchematic (D3 Pattern 2) ─────────────────────────────
 //
-// D3 owns the SVG. React provides a <div> container and a <svg> ref.
+// D3 owns the SVG. React provides a container div and an svg ref.
 // Redraws on legs change or container resize via ResizeObserver.
 //
 // Layers (bottom → top):
-//   .layer-lines      — connecting lines between nodes
+//   .layer-lines      — connecting lines between airport nodes
 //   .layer-waypoints  — intermediate waypoint dots
 //   .layer-nodes      — airport circles with verdict color
 //   .layer-labels     — identifier text below each node
 //
-// Node verdict colors:
-//   'ready'    → --color-within (green) if weather ok, --color-marginal, --color-below, --color-hazard
-//   'fetching' → pulsing --color-text-muted
-//   'idle'/'error' → --color-text-muted
+// Node keys:
+//   Each airport occurrence gets a unique key based on its position
+//   in the ordered sequence: 'node-0', 'node-1', ... 'node-N'.
+//   This ensures duplicate airports (e.g. circuit KIAD→KOKV→KIAD)
+//   are treated as separate D3 elements and can be selected independently.
 //
 // Props:
 //   legs:          LegState[]       — from useLegState
-//   selectedNode:  string | null    — currently selected airport id
-//   onSelectNode:  (id) => void
-//   onSelectLeg:   (legId) => void
+//   selectedNode:  string | null    — unique node key, e.g. 'node-0'
+//   onSelectNode:  (key: string) => void
+//   onSelectLeg:   (legId: string) => void
 
 import React, { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
@@ -34,22 +35,54 @@ function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-// Derive display nodes from legs
-// Returns [{ id, type:'airport'|'waypoint', legIndex, wptIndex? }]
+// Returns:
+//   airports: { key, stationId, legIndex, role }[]  — ordered left→right
+//   waypoints: { key, stationId, legIndex, wptIndex }[]
+//
+// key is a unique positional identifier ('node-0', 'node-1', ...; 'wpt-0-0', ...).
+// stationId is the human-readable ICAO code shown in labels.
+// legIndex: for arrival nodes = the leg they terminate; for departure node = 0.
 function deriveDisplayNodes(legs) {
-  if (!legs?.length) return []
-  const nodes = [{ id: legs[0].departure, type: 'airport' }]
+  if (!legs?.length) return { airports: [], waypoints: [] }
+
+  const airports  = []
+  const waypoints = []
+  let   nodeIdx   = 0
+
+  // Departure node of leg 0
+  airports.push({
+    key:       `node-${nodeIdx++}`,
+    stationId: legs[0].departure,
+    legIndex:  0,
+    role:      'dep',
+  })
+
   for (let li = 0; li < legs.length; li++) {
     const leg = legs[li]
+
+    // Waypoints for this leg
     leg.waypoints.forEach((wpt, wi) => {
-      nodes.push({ id: wpt, type: 'waypoint', legIndex: li, wptIndex: wi })
+      waypoints.push({
+        key:      `wpt-${li}-${wi}`,
+        stationId: wpt,
+        legIndex: li,
+        wptIndex: wi,
+      })
     })
-    nodes.push({ id: leg.destination, type: 'airport', legIndex: li })
+
+    // Arrival node — gets its own unique key even if stationId repeats
+    airports.push({
+      key:       `node-${nodeIdx++}`,
+      stationId: leg.destination,
+      legIndex:  li,
+      role:      'arr',
+    })
   }
-  return nodes
+
+  return { airports, waypoints }
 }
 
-// Map leg status to fill color
+// Pick fill color based on leg status.
 function nodeColor(leg, isSelected) {
   if (!leg) return getCssVar('--color-text-muted')
   if (leg.status === 'fetching') return getCssVar('--color-text-muted')
@@ -81,38 +114,23 @@ export default function RouteSchematic({
       const svg = d3.select(svgEl)
       svg.attr('width', width).attr('height', SVG_HEIGHT)
 
-      const displayNodes = deriveDisplayNodes(legs)
-      const airports     = displayNodes.filter(n => n.type === 'airport')
-      const waypoints    = displayNodes.filter(n => n.type === 'waypoint')
+      const { airports, waypoints } = deriveDisplayNodes(legs)
+      if (!airports.length) {
+        svg.selectAll('*').remove()
+        return
+      }
 
-      const usableW = width - H_PADDING * 2
+      const usableW   = width - H_PADDING * 2
       const airportXs = airports.map((_, i) =>
         airports.length === 1
           ? width / 2
           : H_PADDING + i * (usableW / (airports.length - 1))
       )
 
-      // Map airport id to x position
-      const airportXMap = {}
-      airports.forEach((n, i) => { airportXMap[n.id] = airportXs[i] })
-
-      // Compute waypoint x positions — interpolated between surrounding airports
-      // For each waypoint, find its leg's from/to airports
-      const wptXMap = {}
-      waypoints.forEach(n => {
-        const leg = legs[n.legIndex]
-        if (!leg) return
-        const x1 = airportXMap[leg.departure]    ?? H_PADDING
-        const x2 = airportXMap[leg.destination]  ?? width - H_PADDING
-        const wptCount = leg.waypoints.length
-        const t = (n.wptIndex + 1) / (wptCount + 1)
-        wptXMap[n.id] = x1 + t * (x2 - x1)
-      })
-
-      const colorBorder   = getCssVar('--color-border')
-      const colorMuted    = getCssVar('--color-text-muted')
-      const colorText     = getCssVar('--color-text-primary')
-      const colorSelected = getCssVar('--color-brand-gold')
+      const colorBorder = getCssVar('--color-border')
+      const colorMuted  = getCssVar('--color-text-muted')
+      const colorGold   = getCssVar('--color-brand-gold')
+      const colorText   = getCssVar('--color-text-primary')
 
       // Ensure layer groups exist in correct z-order
       if (svg.select('.layer-lines').empty())     svg.append('g').attr('class', 'layer-lines')
@@ -120,15 +138,15 @@ export default function RouteSchematic({
       if (svg.select('.layer-nodes').empty())     svg.append('g').attr('class', 'layer-nodes')
       if (svg.select('.layer-labels').empty())    svg.append('g').attr('class', 'layer-labels')
 
-      const layerLines = svg.select('.layer-lines')
-      const layerWpts  = svg.select('.layer-waypoints')
-      const layerNodes = svg.select('.layer-nodes')
+      const layerLines  = svg.select('.layer-lines')
+      const layerWpts   = svg.select('.layer-waypoints')
+      const layerNodes  = svg.select('.layer-nodes')
       const layerLabels = svg.select('.layer-labels')
 
-      // ── Lines ──
+      // ── Lines — one per leg, connecting sequential airport positions ──
       const lineData = legs.map((leg, i) => ({
-        x1: airportXMap[leg.departure]   ?? H_PADDING,
-        x2: airportXMap[leg.destination] ?? width - H_PADDING,
+        x1:       airportXs[i],
+        x2:       airportXs[i + 1],
         leg,
         legIndex: i,
       }))
@@ -139,52 +157,50 @@ export default function RouteSchematic({
       lines.enter()
         .append('line')
         .attr('class', 'leg-line')
-        .attr('y1', LINE_Y)
-        .attr('y2', LINE_Y)
-        .attr('stroke', colorBorder)
-        .attr('stroke-width', 2)
+        .attr('y1', LINE_Y).attr('y2', LINE_Y)
+        .attr('stroke', colorBorder).attr('stroke-width', 2)
         .attr('cursor', 'pointer')
         .on('click', (_, d) => onSelectLeg?.(d.leg.id))
         .merge(lines)
         .transition().duration(300).ease(d3.easeQuadOut)
-        .attr('x1', d => d.x1)
-        .attr('x2', d => d.x2)
+        .attr('x1', d => d.x1).attr('x2', d => d.x2)
 
       lines.exit().remove()
 
-      // Wide invisible hit target for leg tap
+      // Wide invisible hit target
       const lineHits = layerLines.selectAll('line.leg-hit')
         .data(lineData, (_, i) => i)
 
       lineHits.enter()
         .append('line')
         .attr('class', 'leg-hit')
-        .attr('y1', LINE_Y)
-        .attr('y2', LINE_Y)
-        .attr('stroke', 'transparent')
-        .attr('stroke-width', 24)
+        .attr('y1', LINE_Y).attr('y2', LINE_Y)
+        .attr('stroke', 'transparent').attr('stroke-width', 24)
         .attr('cursor', 'pointer')
         .on('click', (_, d) => onSelectLeg?.(d.leg.id))
         .merge(lineHits)
         .transition().duration(300).ease(d3.easeQuadOut)
-        .attr('x1', d => d.x1)
-        .attr('x2', d => d.x2)
+        .attr('x1', d => d.x1).attr('x2', d => d.x2)
 
       lineHits.exit().remove()
 
-      // ── Waypoint dots ──
-      const wptData = waypoints.map(n => ({ ...n, x: wptXMap[n.id] ?? H_PADDING }))
+      // ── Waypoints ──
+      const wptData = waypoints.map(n => {
+        const x1 = airportXs[n.legIndex]     ?? H_PADDING
+        const x2 = airportXs[n.legIndex + 1] ?? width - H_PADDING
+        const wptCount = legs[n.legIndex]?.waypoints?.length ?? 1
+        const t  = (n.wptIndex + 1) / (wptCount + 1)
+        return { ...n, x: x1 + t * (x2 - x1) }
+      })
 
       const wpts = layerWpts.selectAll('circle.wpt')
-        .data(wptData, d => `${d.legIndex}-${d.wptIndex}`)
+        .data(wptData, d => d.key)
 
       wpts.enter()
         .append('circle')
         .attr('class', 'wpt')
-        .attr('cy', LINE_Y)
-        .attr('r', WPT_R)
-        .attr('fill', colorBorder)
-        .attr('stroke', 'none')
+        .attr('cy', LINE_Y).attr('r', WPT_R)
+        .attr('fill', colorBorder).attr('stroke', 'none')
         .merge(wpts)
         .transition().duration(300).ease(d3.easeQuadOut)
         .attr('cx', d => d.x)
@@ -192,40 +208,34 @@ export default function RouteSchematic({
       wpts.exit().remove()
 
       // ── Airport nodes ──
-      const nodeData = airports.map((n, i) => {
-        // Departure node belongs to legs[0], destination of leg i belongs to legs[i]
-        const legForNode = n.legIndex != null ? legs[n.legIndex] : legs[0]
-        return {
-          ...n,
-          x:    airportXs[i],
-          leg:  legForNode,
-          selected: selectedNode === n.id,
-        }
-      })
+      const nodeData = airports.map((n, i) => ({
+        ...n,
+        x:        airportXs[i],
+        leg:      legs[n.legIndex] ?? null,
+        selected: selectedNode === n.key,
+      }))
 
       const nodes = layerNodes.selectAll('circle.airport-node')
-        .data(nodeData, d => d.id)
+        .data(nodeData, d => d.key)
 
       nodes.enter()
         .append('circle')
-        .attr('class', d => `airport-node${d.leg?.status === 'fetching' ? ' node-fetching' : ''}`)
-        .attr('cy', LINE_Y)
-        .attr('r', NODE_R)
-        .attr('stroke-width', 2)
-        .attr('cursor', 'pointer')
-        .on('click', (_, d) => onSelectNode?.(d.id))
+        .attr('class', d => `airport-node${(d.leg?.status === 'fetching') ? ' node-fetching' : ''}`)
+        .attr('cy', LINE_Y).attr('r', NODE_R)
+        .attr('stroke-width', 2).attr('cursor', 'pointer')
+        .on('click', (_, d) => onSelectNode?.(d.key))
         .merge(nodes)
-        .attr('class', d => `airport-node${d.leg?.status === 'fetching' ? ' node-fetching' : ''}`)
+        .attr('class', d => `airport-node${(d.leg?.status === 'fetching') ? ' node-fetching' : ''}`)
         .transition().duration(300).ease(d3.easeQuadOut)
         .attr('cx', d => d.x)
-        .attr('fill', d => nodeColor(d.leg, d.selected))
-        .attr('stroke', d => d.selected ? colorSelected : colorBorder)
+        .attr('fill',   d => nodeColor(d.leg, d.selected))
+        .attr('stroke', d => d.selected ? colorGold : colorBorder)
 
       nodes.exit().remove()
 
       // ── Labels ──
       const labels = layerLabels.selectAll('text.node-label')
-        .data(nodeData, d => d.id)
+        .data(nodeData, d => d.key)
 
       labels.enter()
         .append('text')
@@ -235,22 +245,20 @@ export default function RouteSchematic({
         .attr('font-family', getCssVar('--font-sans'))
         .attr('font-size', '11px')
         .attr('cursor', 'pointer')
-        .on('click', (_, d) => onSelectNode?.(d.id))
+        .on('click', (_, d) => onSelectNode?.(d.key))
         .merge(labels)
         .transition().duration(300).ease(d3.easeQuadOut)
-        .attr('x', d => d.x)
-        .attr('fill', d => d.selected ? colorSelected : colorText)
-        .text(d => d.id)
+        .attr('x',    d => d.x)
+        .attr('fill', d => d.selected ? colorGold : colorText)
+        .text(d => d.stationId)
 
       labels.exit().remove()
     }
 
     drawRef.current = draw
-
-    // Initial draw
     draw(container.clientWidth || 320)
 
-    // Pulse for fetching nodes
+    // Pulse animation for fetching nodes
     clearInterval(pulseRef.current)
     pulseRef.current = setInterval(() => {
       const svg = d3.select(svgEl)
@@ -259,20 +267,14 @@ export default function RouteSchematic({
       const colorMuted = getCssVar('--color-text-muted')
       const colorGold  = getCssVar('--color-brand-gold')
       svg.selectAll('circle.node-fetching')
-        .transition()
-        .duration(500)
-        .ease(d3.easeSinInOut)
+        .transition().duration(500).ease(d3.easeSinInOut)
         .attr('fill', function() {
-          const cur = d3.select(this).attr('fill')
-          return cur === colorGold ? colorMuted : colorGold
+          return d3.select(this).attr('fill') === colorGold ? colorMuted : colorGold
         })
     }, 600)
 
-    // ResizeObserver
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        drawRef.current?.(entry.contentRect.width)
-      }
+      for (const entry of entries) drawRef.current?.(entry.contentRect.width)
     })
     ro.observe(container)
 

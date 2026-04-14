@@ -168,7 +168,9 @@ export function useLegState() {
   // Bulk-initialize legs from an array of definitions.
   // legDefinitions: { departure, destination, waypoints, weather }[]
   // Each leg is set to status 'ready' if weather is present, else 'idle'.
+  // Resets leg ID counter so legs are always numbered from leg-1.
   const initLegs = useCallback((legDefinitions) => {
+    nextId = 1
     const initialized = legDefinitions.map(def => {
       const id  = `leg-${nextId++}`
       const leg = makeLeg(id, def.departure, def.destination, def.waypoints ?? [])

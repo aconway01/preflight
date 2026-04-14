@@ -85,7 +85,15 @@ export default function App() {
 
   // route-entry → fetching → planning
   const handleRouteCommit = useCallback((legs) => {
-    const urls = buildAllLegUrls(legs)
+    let urls
+    try {
+      urls = buildAllLegUrls(legs)
+    } catch (err) {
+      console.error('[App] buildAllLegUrls threw:', err)
+      setApiError({ type: 'api', message: err.message })
+      setAppState('error')
+      return
+    }
     setRouteLegs(legs)
     setRouteModified(false)
     runFetch(urls, { legs }, {

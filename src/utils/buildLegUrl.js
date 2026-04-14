@@ -1,46 +1,65 @@
 // ── V2 leg fetch URL builder ──────────────────────────────────
 //
-// Builds the fetch URL for a single leg's weather briefing.
-// Uses FAA VFR day minimums, 6500ft default cruise altitude, and
-// the current time as departure time.
+// Builds the fetch URL for a single leg using the parameter names
+// Code.gs (Apps Script) expects — same as buildPreflightUrl.legacy.js
+// but scoped to one leg at a time.
+//
+// Code.gs required params:
+//   legs           — "KDEP,KARR" (single leg; multi-leg would be pipe-separated)
+//   departureTimes — UTC ISO string
+//   flightRules    — "VFR" | "IFR"
+//   cruiseAltitudes— ft as string
+//   minVis, minCeil, maxXwd, maxTotalWind, maxGust, cautionDA, noGoDA (day)
+//   nightMin*      — same keys prefixed "night" (night threshold values)
 //
 // routeLeg: { from, to, waypoints: string[] }
-//
-// Returns a URL string pointing at the Apps Script endpoint.
+// Returns a URL string.
 
 import { CA_DATA } from '../data/config'
 
 const DEFAULT_ALTITUDE_FT = 6500
-const DEFAULT_FLIGHT_MODE = 'vfr_day'
+
+// Minimums to send for VFR day (FAA floor values)
+const DAY_THRESHOLD_KEYS = [
+  'minVis', 'minCeil', 'maxXwd', 'maxTotalWind',
+  'maxGust', 'cautionDA', 'noGoDA', 'maxPressureAlt',
+]
+
+// Night key transform: minVis → nightMinVis
+function toNightKey(key) {
+  return 'night' + key[0].toUpperCase() + key.slice(1)
+}
 
 export function buildLegUrl(routeLeg) {
-  const { from, to, waypoints = [] } = routeLeg
+  const { from, to } = routeLeg
 
   const url = new URL(CA_DATA.APPS_SCRIPT_URL)
+  const p   = url.searchParams
 
-  url.searchParams.set('departure',    from)
-  url.searchParams.set('destination',  to)
-  url.searchParams.set('altitude',     String(DEFAULT_ALTITUDE_FT))
-  url.searchParams.set('flightMode',   DEFAULT_FLIGHT_MODE)
-  url.searchParams.set('departureTime', new Date().toISOString())
+  // Single leg in the format Code.gs expects
+  p.set('legs',            `${from},${to}`)
+  p.set('departureTimes',  new Date().toISOString())
+  p.set('flightRules',     'VFR')
+  p.set('cruiseAltitudes', String(DEFAULT_ALTITUDE_FT))
 
-  if (waypoints.length > 0) {
-    url.searchParams.set('waypoints', waypoints.join(','))
+  // Day minimums — FAA VFR day floor
+  const dayMins = CA_DATA.FAA_MINIMUMS?.vfr_day ?? {}
+  for (const key of DAY_THRESHOLD_KEYS) {
+    const val = dayMins[key]
+    if (val != null) p.set(key, String(val))
   }
 
-  // FAA minimums for VFR day
-  const mins = CA_DATA.FAA_MINIMUMS[DEFAULT_FLIGHT_MODE]
-  if (mins) {
-    Object.entries(mins).forEach(([k, v]) => {
-      if (v != null) url.searchParams.set(`min_${k}`, String(v))
-    })
+  // Night minimums — FAA VFR night floor (Code.gs applies these for night arrivals)
+  const nightMins = CA_DATA.FAA_MINIMUMS?.vfr_night ?? {}
+  for (const key of DAY_THRESHOLD_KEYS) {
+    const val = nightMins[key]
+    if (val != null) p.set(toNightKey(key), String(val))
   }
 
   return url.toString()
 }
 
-// Build URLs for all legs from a routeLegs array ({ from, to, waypoints }[]).
-// Returns string[].
+// Build URLs for all legs. Returns string[].
 export function buildAllLegUrls(routeLegs) {
   return routeLegs.map(buildLegUrl)
 }
